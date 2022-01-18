@@ -259,10 +259,10 @@ endif
 ifeq ($(TARGET_N64),1)
 
 ifeq ($(VERSION),eu)
-  OPT_FLAGS := -O2
+  OPT_FLAGS := -Ofast
 else
 ifeq ($(VERSION),sh)
-  OPT_FLAGS := -O2
+  OPT_FLAGS := -Ofast
 else
   OPT_FLAGS := -g
 endif
@@ -270,14 +270,14 @@ endif
 
   # Use a default opt flag for gcc
   ifeq ($(COMPILER),gcc)
-    OPT_FLAGS := -O2
+    OPT_FLAGS := -Ofast
   endif
 
 else
 ifeq ($(TARGET_WEB),1)
-  OPT_FLAGS := -O2 -g4 --source-map-base http://localhost:8080/
+  OPT_FLAGS := -Ofast -g4 --source-map-base http://localhost:8080/
 else
-  OPT_FLAGS := -O2
+  OPT_FLAGS := -Ofast
 endif
 endif
 
@@ -474,7 +474,7 @@ ifeq ($(TARGET_N3DS),1)
   OBJDUMP := $(DEVKITARM)/bin/arm-none-eabi-objdump
   OBJCOPY := $(DEVKITARM)/bin/arm-none-eabi-objcopy
   AS := $(DEVKITARM)/bin/arm-none-eabi-as
-  CC := $(DEVKITARM)/bin/arm-none-eabi-gcc
+  CC := $(DEVKITARM)/bin/arm-none-eabi-gcc 
   CXX := $(DEVKITARM)/bin/arm-none-eabi-g++
   LD := $(CXX)
 endif
@@ -498,8 +498,8 @@ ifeq ($(TARGET_N3DS),1)
   CTRULIB  :=  $(DEVKITPRO)/libctru
   LIBDIRS  := $(CTRULIB)
   export LIBPATHS  :=  $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
-  PLATFORM_CFLAGS  := -mtp=soft -DTARGET_N3DS -DARM11 -DosGetTime=n64_osGetTime -D_3DS -march=armv6k -mtune=mpcore -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math $(foreach dir,$(LIBDIRS),-I$(dir)/include)
-  PLATFORM_LDFLAGS := $(LIBPATHS) -lcitro3d -lctru -lm -specs=3dsx.specs -g -marm -mthumb-interwork -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
+  PLATFORM_CFLAGS  := -mtp=soft -DTARGET_N3DS -DARM11 -DosGetTime=n64_osGetTime -D_3DS -march=armv6k -mtune=mpcore -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math $(foreach dir,$(LIBDIRS),-I$(dir)/include) -flto=auto
+  PLATFORM_LDFLAGS := $(LIBPATHS) -lcitro3d -lctru -lm -specs=3dsx.specs -g -marm -mthumb-interwork -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -flto=auto
   ifeq ($(DISABLE_AUDIO),1)
     PLATFORM_CFLAGS += -DDISABLE_AUDIO
   endif
@@ -794,35 +794,35 @@ $(BUILD_DIR)/actors/%.o: OPT_FLAGS := -g
 $(BUILD_DIR)/bin/%.o: OPT_FLAGS := -g
 $(BUILD_DIR)/src/goddard/%.o: OPT_FLAGS := -g
 $(BUILD_DIR)/src/goddard/%.o: MIPSISET := -mips1
-$(BUILD_DIR)/src/audio/%.o: OPT_FLAGS := -O2 -Wo,-loopunroll,0
-$(BUILD_DIR)/src/audio/load.o: OPT_FLAGS := -O2 -framepointer -Wo,-loopunroll,0
+$(BUILD_DIR)/src/audio/%.o: OPT_FLAGS := -Ofast -Wo,-loopunroll,0
+$(BUILD_DIR)/src/audio/load.o: OPT_FLAGS := -Ofast -framepointer -Wo,-loopunroll,0
 $(BUILD_DIR)/lib/src/%.o: OPT_FLAGS :=
 $(BUILD_DIR)/lib/src/math/ll%.o: MIPSISET := -mips3 -32
-$(BUILD_DIR)/lib/src/math/%.o: OPT_FLAGS := -O2
+$(BUILD_DIR)/lib/src/math/%.o: OPT_FLAGS := -Ofast
 $(BUILD_DIR)/lib/src/math/ll%.o: OPT_FLAGS :=
-$(BUILD_DIR)/lib/src/ldiv.o: OPT_FLAGS := -O2
-$(BUILD_DIR)/lib/src/string.o: OPT_FLAGS := -O2
-$(BUILD_DIR)/lib/src/gu%.o: OPT_FLAGS := -O3
-$(BUILD_DIR)/lib/src/al%.o: OPT_FLAGS := -O3
+$(BUILD_DIR)/lib/src/ldiv.o: OPT_FLAGS := -Ofast
+$(BUILD_DIR)/lib/src/string.o: OPT_FLAGS := -Ofast
+$(BUILD_DIR)/lib/src/gu%.o: OPT_FLAGS := -Ofast
+$(BUILD_DIR)/lib/src/al%.o: OPT_FLAGS := -Ofast
 
 ifeq ($(VERSION),eu)
-$(BUILD_DIR)/lib/src/_Litob.o: OPT_FLAGS := -O3
-$(BUILD_DIR)/lib/src/_Ldtob.o: OPT_FLAGS := -O3
-$(BUILD_DIR)/lib/src/_Printf.o: OPT_FLAGS := -O3
-$(BUILD_DIR)/lib/src/sprintf.o: OPT_FLAGS := -O3
+$(BUILD_DIR)/lib/src/_Litob.o: OPT_FLAGS := -Ofast
+$(BUILD_DIR)/lib/src/_Ldtob.o: OPT_FLAGS := -Ofast
+$(BUILD_DIR)/lib/src/_Printf.o: OPT_FLAGS := -Ofast
+$(BUILD_DIR)/lib/src/sprintf.o: OPT_FLAGS := -Ofast
 
 # enable loop unrolling except for external.c (external.c might also have used
 # unrolling, but it makes one loop harder to match)
-$(BUILD_DIR)/src/audio/%.o: OPT_FLAGS := -O2
-$(BUILD_DIR)/src/audio/load.o: OPT_FLAGS := -O2
-$(BUILD_DIR)/src/audio/external.o: OPT_FLAGS := -O2 -Wo,-loopunroll,0
+$(BUILD_DIR)/src/audio/%.o: OPT_FLAGS := -Ofast
+$(BUILD_DIR)/src/audio/load.o: OPT_FLAGS := -Ofast
+$(BUILD_DIR)/src/audio/external.o: OPT_FLAGS := -Ofast -Wo,-loopunroll,0
 else
 
 # The source-to-source optimizer copt is enabled for audio. This makes it use
 # acpp, which needs -Wp,-+ to handle C++-style comments.
-$(BUILD_DIR)/src/audio/effects.o: OPT_FLAGS := -O2 -Wo,-loopunroll,0 -sopt,-inline=sequence_channel_process_sound,-scalaroptimize=1 -Wp,-+
-$(BUILD_DIR)/src/audio/synthesis.o: OPT_FLAGS := -O2 -sopt,-scalaroptimize=1 -Wp,-+
-#$(BUILD_DIR)/src/audio/seqplayer.o: OPT_FLAGS := -O2 -sopt,-inline_manual,-scalaroptimize=1 -Wp,-+ #-Wo,-v,-bb,-l,seqplayer_list.txt
+$(BUILD_DIR)/src/audio/effects.o: OPT_FLAGS := -Ofast -Wo,-loopunroll,0 -sopt,-inline=sequence_channel_process_sound,-scalaroptimize=1 -Wp,-+
+$(BUILD_DIR)/src/audio/synthesis.o: OPT_FLAGS := -Ofast -sopt,-scalaroptimize=1 -Wp,-+
+#$(BUILD_DIR)/src/audio/seqplayer.o: OPT_FLAGS := -Ofast -sopt,-inline_manual,-scalaroptimize=1 -Wp,-+ #-Wo,-v,-bb,-l,seqplayer_list.txt
 
 # Add a target for build/eu/src/audio/*.copt to make it easier to see debug
 $(BUILD_DIR)/src/audio/%.acpp: src/audio/%.c

@@ -13,24 +13,12 @@ inline void *memcpy(int *dst, const int *src, size_t size) {
 
 
 
-#ifdef __SSE4_1__
-#include <immintrin.h>
-#define HAS_SSE41 1
-#define HAS_NEON 0
-#elif __ARM_NEON
-#include <arm_neon.h>
-#define HAS_SSE41 0
-#define HAS_NEON 1
-#else
 #define HAS_SSE41 0
 #define HAS_NEON 0
-#endif
 
 #pragma GCC optimize ("unroll-loops")
 
-#if HAS_SSE41
-#define LOADLH(l, h) _mm_castpd_si128(_mm_loadh_pd(_mm_load_sd((const double *)(l)), (const double *)(h)))
-#endif
+
 
 #define ROUND_UP_32(v) (((v) + 31) & ~31)
 #define ROUND_UP_16(v) (((v) + 15) & ~15)
@@ -99,22 +87,18 @@ static int16_t resample_table[64][4] = {
 };
 
 static inline int16_t clamp16(int32_t v) {
-    if (v <= -0x8001) {
-        return -0x8000;
-    } 
-    if (v >= 0x7ffe) {
-        return 0x7fff;
-    }
+	unsigned int biton=0;
+	biton=v&0x80000000;
+    v&=0x7fff;
+	v|=biton?0x8000:0;
     return (int16_t)v;
 }
 
 static inline int32_t clamp32(int64_t v) {
-    if (v < -0x7fffffff - 1) {
-        return -0x7fffffff - 1;
-    }  
-    if (v >= 0x7ffffffe) {
-        return 0x7fffffff;
-    }
+    uint64_t biton=0;
+	biton=v&0x8000000000000000;
+	v&=0x7fffffff;
+	v|=biton?0x80000000:0;
     return (int32_t)v;
 }
 
@@ -235,12 +219,6 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
         memcpy(out, state,32);
     }
     out += 16;
-#if HAS_SSE41
-    __m128i prev_interleaved = _mm_set1_epi32((uint16_t)out[-2] | ((uint16_t)out[-1] << 16));
-    //__m128i prev_interleaved = _mm_shuffle_epi32(_mm_loadu_si32(out - 2), 0); // GCC misses this?
-#elif HAS_NEON
-    int16x8_t result = vld1q_s16(out - 8);
-#endif
     while (nbytes > 0) {
         int shift = *in >> 4; // should be in 0..12
         int table_index = *in & 0xf; // should be in 0..7
@@ -252,18 +230,19 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
             int16_t prev1 = out[-1];
             int16_t prev2 = out[-2];
             int j, k;
-            for (j = 0; j < 4; j++) {
+            for (j = 0; j < 4; ++j) {
                 ins[j << 1] = (((*in >> 4) << 28) >> 28) << shift;
                 ins[(j << 1) + 1] = (((*in & 0xf) << 28) >> 28) << shift;
 				++in;
             }
-            for (j = 0; j < 8; j++) {
+            for (j = 0; j < 8; ++j) {
                 int32_t acc = tbl[0][j] * prev2 + tbl[1][j] * prev1 + (ins[j] << 11);
                 for (k = 0; k < j; ++k) {
                     acc += tbl[1][((j - k) - 1)] * ins[k];
                 }
                 acc >>= 11;
-                *out++ = clamp16(acc);
+                *out = clamp16(acc);
+				++out;
             }
         }
 
@@ -303,8 +282,8 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
                      ((in[1] * tbl[1] + 0x4000) >> 15) +
                      ((in[2] * tbl[2] + 0x4000) >> 15) +
                      ((in[3] * tbl[3] + 0x4000) >> 15);
-            *out++ = clamp16(sample);
-
+            *out = clamp16(sample);
+			++out;
             pitch_accumulator += (pitch << 1);
             in += pitch_accumulator >> 16;
             pitch_accumulator %= 0x10000;
@@ -412,32 +391,13 @@ void aMixImpl(int16_t gain, uint16_t in_addr, uint16_t out_addr) {
     int nbytes = ROUND_UP_32(rspa.nbytes);
     int16_t *in = rspa.buf.as_s16 + (in_addr >> 1);
     int16_t *out = rspa.buf.as_s16 + (out_addr >> 1);
-#if HAS_SSE41
-    __m128i gain_vec = _mm_set1_epi16(gain);
-#elif !HAS_NEON
     int i;
     int32_t sample;
-#endif
 
-#if !HAS_NEON
+
     if (gain == -0x8000) {
         while (nbytes > 0) {
-#if HAS_SSE41
-            __m128i out1, out2, in1, in2;
-            out1 = _mm_loadu_si128((const __m128i *)out);
-            out2 = _mm_loadu_si128((const __m128i *)(out + 8));
-            in1 = _mm_loadu_si128((const __m128i *)in);
-            in2 = _mm_loadu_si128((const __m128i *)(in + 8));
 
-            out1 = _mm_subs_epi16(out1, in1);
-            out2 = _mm_subs_epi16(out2, in2);
-
-            _mm_storeu_si128((__m128i *)out, out1);
-            _mm_storeu_si128((__m128i *)(out + 8), out2);
-
-            out += 16;
-            in += 16;
-#else
             for (i = 0; i < 16; ++i) {
                 sample = *out - *in;
 				++in;
@@ -445,45 +405,13 @@ void aMixImpl(int16_t gain, uint16_t in_addr, uint16_t out_addr) {
 				++out;
 				
 			}
-#endif
 
             nbytes -= 32;
         }
     }
-#endif
 
     while (nbytes > 0) {
-#if HAS_SSE41
-        __m128i out1, out2, in1, in2;
-        out1 = _mm_loadu_si128((const __m128i *)out);
-        out2 = _mm_loadu_si128((const __m128i *)(out + 8));
-        in1 = _mm_loadu_si128((const __m128i *)in);
-        in2 = _mm_loadu_si128((const __m128i *)(in + 8));
 
-        out1 = _mm_adds_epi16(out1, _mm_mulhrs_epi16(in1, gain_vec));
-        out2 = _mm_adds_epi16(out2, _mm_mulhrs_epi16(in2, gain_vec));
-
-        _mm_storeu_si128((__m128i *)out, out1);
-        _mm_storeu_si128((__m128i *)(out + 8), out2);
-
-        out += 16;
-        in += 16;
-#elif HAS_NEON
-        int16x8_t out1, out2, in1, in2;
-        out1 = vld1q_s16(out);
-        out2 = vld1q_s16(out + 8);
-        in1 = vld1q_s16(in);
-        in2 = vld1q_s16(in + 8);
-
-        out1 = vqaddq_s16(out1, vqrdmulhq_n_s16(in1, gain));
-        out2 = vqaddq_s16(out2, vqrdmulhq_n_s16(in2, gain));
-
-        vst1q_s16(out, out1);
-        vst1q_s16(out + 8, out2);
-
-        out += 16;
-        in += 16;
-#else
         for (i = 0; i < 16; ++i) {
             sample = ((*out * 0x7fff + *in * gain) + 0x4000) >> 15;
 			++in;
@@ -491,7 +419,6 @@ void aMixImpl(int16_t gain, uint16_t in_addr, uint16_t out_addr) {
 			++out;
 			
 		}
-#endif
 
         nbytes -= 32;
     }

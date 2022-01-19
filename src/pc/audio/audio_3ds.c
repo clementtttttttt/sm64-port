@@ -60,8 +60,8 @@ static void audio_3ds_play(const uint8_t *buf, size_t len)
 
     s16* dst = (s16*)sDspBuffers[sNextBuffer].data_vaddr;
  //   memcpy(dst, buf, len);
-	for(unsigned int i=0;i<(len>>2);++i){
-		((short*)dst)[i]=((short*)buf)[i<<1];
+	for(unsigned int i=0;i<(len>>3);++i){
+		((int*)dst)[i]=((int*)buf)[i<<1];
 	}
 	DSP_FlushDataCache(dst, len>>1);
 

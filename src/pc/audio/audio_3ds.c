@@ -49,7 +49,7 @@ static int audio_3ds_get_desired_buffered(void)
 
 static void audio_3ds_play(const uint8_t *buf, size_t len)
 {
-    if (len > 16384)
+    if (len > 12288)
         return;
     if (sDspBuffers[sNextBuffer].status != NDSP_WBUF_FREE &&
         sDspBuffers[sNextBuffer].status != NDSP_WBUF_DONE)

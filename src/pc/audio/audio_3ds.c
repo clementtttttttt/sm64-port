@@ -80,9 +80,8 @@ static void audio_3ds_loop()
             break;
         u32 num_audio_samples = audio_3ds_buffered() < audio_3ds_get_desired_buffered() ? SAMPLES_HIGH : SAMPLES_LOW;
         s16 audio_buffer[SAMPLES_HIGH * 2 * 2];
-        for (int i = 0; i < 2; i++) {
-            create_next_audio_buffer(audio_buffer + i * (num_audio_samples * 2), num_audio_samples);
-        }
+		create_next_audio_buffer(audio_buffer, num_audio_samples);
+		create_next_audio_buffer(audio_buffer + (num_audio_samples << 1), num_audio_samples);
         audio_3ds_play((u8 *)audio_buffer, num_audio_samples << 3);
         LightEvent_Signal(&s_event_main);
     }

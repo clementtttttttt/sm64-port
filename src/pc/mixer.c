@@ -1,7 +1,17 @@
 #include <stdbool.h>
 #include <stdint.h>
-#include <string.h>
 #include <ultra64.h>
+
+inline void *memcpy(int *dst, const int *src, size_t size) {
+    u8 *_dst = dst;
+    for(int i=0;i<(size>>2);++i){
+			dst[i]=src[i];
+	}
+	
+    return dst;
+}
+
+
 
 #ifdef __SSE4_1__
 #include <immintrin.h>
@@ -89,9 +99,10 @@ static int16_t resample_table[64][4] = {
 };
 
 static inline int16_t clamp16(int32_t v) {
-    if (v < -0x8000) {
+    if (v <= -0x8001) {
         return -0x8000;
-    } else if (v > 0x7fff) {
+    } 
+    if (v >= 0x7ffe) {
         return 0x7fff;
     }
     return (int16_t)v;
@@ -100,7 +111,8 @@ static inline int16_t clamp16(int32_t v) {
 static inline int32_t clamp32(int64_t v) {
     if (v < -0x7fffffff - 1) {
         return -0x7fffffff - 1;
-    } else if (v > 0x7fffffff) {
+    }  
+    if (v >= 0x7ffffffe) {
         return 0x7fffffff;
     }
     return (int32_t)v;
@@ -162,38 +174,41 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
     int16_t *r = rspa.buf.as_s16 + right / sizeof(int16_t);
     int16_t *d = rspa.buf.as_s16 + rspa.out / sizeof(int16_t);
     while (count > 0) {
-        int16_t l0 = *l++;
-        int16_t l1 = *l++;
-        int16_t l2 = *l++;
-        int16_t l3 = *l++;
-        int16_t l4 = *l++;
-        int16_t l5 = *l++;
-        int16_t l6 = *l++;
-        int16_t l7 = *l++;
-        int16_t r0 = *r++;
-        int16_t r1 = *r++;
-        int16_t r2 = *r++;
-        int16_t r3 = *r++;
-        int16_t r4 = *r++;
-        int16_t r5 = *r++;
-        int16_t r6 = *r++;
-        int16_t r7 = *r++;
-        *d++ = l0;
-        *d++ = r0;
-        *d++ = l1;
-        *d++ = r1;
-        *d++ = l2;
-        *d++ = r2;
-        *d++ = l3;
-        *d++ = r3;
-        *d++ = l4;
-        *d++ = r4;
-        *d++ = l5;
-        *d++ = r5;
-        *d++ = l6;
-        *d++ = r6;
-        *d++ = l7;
-        *d++ = r7;
+        int16_t l0 = *l;
+        int16_t l1 = *++l;
+        int16_t l2 = *++l;
+        int16_t l3 = *++l;
+        int16_t l4 = *++l;
+        int16_t l5 = *++l;
+        int16_t l6 = *++l;
+        int16_t l7 = *++l;
+		++l;
+        int16_t r0 = *r;
+        int16_t r1 = *++r;
+        int16_t r2 = *++r;
+        int16_t r3 = *++r;
+        int16_t r4 = *++r;
+        int16_t r5 = *++r;
+        int16_t r6 = *++r;
+        int16_t r7 = *++r;
+		++r;
+        *d = l0;
+        *++d = r0;
+        *++d = l1;
+        *++d = r1;
+        *++d = l2;
+        *++d = r2;
+        *++d = l3;
+        *++d = r3;
+        *++d = l4;
+        *++d = r4;
+        *++d = l5;
+        *++d = r5;
+        *++d = l6;
+        *++d = r6;
+        *++d = l7;
+        *++d = r7;
+		++d;
         --count;
     }
 }
@@ -226,14 +241,14 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
     const int16x8_t table_prefix = vld1q_s16(table_prefix_data);
 #endif
     uint8_t *in = rspa.buf.as_u8 + rspa.in;
-    int16_t *out = rspa.buf.as_s16 + rspa.out / sizeof(int16_t);
+    int16_t *out = rspa.buf.as_s16 + (rspa.out >> 1);
     int nbytes = ROUND_UP_32(rspa.nbytes);
     if (flags & A_INIT) {
-        memset(out, 0, 16 * sizeof(int16_t));
+        memset(out, 0,32);
     } else if (flags & A_LOOP) {
-        memcpy(out, rspa.adpcm_loop_state, 16 * sizeof(int16_t));
+        memcpy(out, rspa.adpcm_loop_state, 32);
     } else {
-        memcpy(out, state, 16 * sizeof(int16_t));
+        memcpy(out, state,32);
     }
     out += 16;
 #if HAS_SSE41
@@ -244,7 +259,8 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
 #endif
     while (nbytes > 0) {
         int shift = *in >> 4; // should be in 0..12
-        int table_index = *in++ & 0xf; // should be in 0..7
+        int table_index = *in & 0xf; // should be in 0..7
+        ++in;
         int16_t (*tbl)[8] = rspa.adpcm_table[table_index];
         int i;
 #if HAS_SSE41
@@ -357,8 +373,9 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
             int16_t prev2 = out[-2];
             int j, k;
             for (j = 0; j < 4; j++) {
-                ins[j * 2] = (((*in >> 4) << 28) >> 28) << shift;
-                ins[j * 2 + 1] = (((*in++ & 0xf) << 28) >> 28) << shift;
+                ins[j << 1] = (((*in >> 4) << 28) >> 28) << shift;
+                ins[(j << 1) + 1] = (((*in & 0xf) << 28) >> 28) << shift;
+				++in;
             }
             for (j = 0; j < 8; j++) {
                 int32_t acc = tbl[0][j] * prev2 + tbl[1][j] * prev1 + (ins[j] << 11);
@@ -394,7 +411,7 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     }
     if (flags & 2) {
         memcpy(in - 8, tmp + 8, 8 * sizeof(int16_t));
-        in -= tmp[5] / sizeof(int16_t);
+        in -= tmp[5] >> 1;
     }
     in -= 4;
     pitch_accumulator = (uint16_t)tmp[4];
@@ -501,7 +518,7 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
 #else
     do {
         for (i = 0; i < 8; i++) {
-            tbl = resample_table[pitch_accumulator * 64 >> 16];
+            tbl = resample_table[pitch_accumulator >> 10];
             sample = ((in[0] * tbl[0] + 0x4000) >> 15) +
                      ((in[1] * tbl[1] + 0x4000) >> 15) +
                      ((in[2] * tbl[2] + 0x4000) >> 15) +
@@ -512,19 +529,19 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
             in += pitch_accumulator >> 16;
             pitch_accumulator %= 0x10000;
         }
-        nbytes -= 8 * sizeof(int16_t);
+        nbytes -= 16;
     } while (nbytes > 0);
 #endif
 
     state[4] = (int16_t)pitch_accumulator;
-    memcpy(state, in, 4 * sizeof(int16_t));
+    memcpy(state, in, 8);
     i = (in - in_initial + 4) & 7;
     in -= i;
     if (i != 0) {
         i = -8 - i;
     }
     state[5] = i;
-    memcpy(state + 8, in, 8 * sizeof(int16_t));
+    memcpy(state + 8, in,16);
 }
 
 
@@ -867,6 +884,6 @@ void aMixImpl(int16_t gain, uint16_t in_addr, uint16_t out_addr) {
         }
 #endif
 
-        nbytes -= 16 * sizeof(int16_t);
+        nbytes -= 32;
     }
 }

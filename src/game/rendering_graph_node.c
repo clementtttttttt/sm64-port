@@ -279,7 +279,6 @@ static void geo_process_level_of_detail(struct GraphNodeLevelOfDetail *node) {
 
 #ifndef TARGET_N64
     // We assume modern hardware is powerful enough to draw the most detailed variant
-    distanceFromCam = 0;
 #endif
 
     if (node->minDistance <= distanceFromCam && distanceFromCam < node->maxDistance) {

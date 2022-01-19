@@ -474,8 +474,8 @@ ifeq ($(TARGET_N3DS),1)
   OBJDUMP := $(DEVKITARM)/bin/arm-none-eabi-objdump
   OBJCOPY := $(DEVKITARM)/bin/arm-none-eabi-objcopy
   AS := $(DEVKITARM)/bin/arm-none-eabi-as
-  CC := $(DEVKITARM)/bin/arm-none-eabi-gcc 
-  CXX := $(DEVKITARM)/bin/arm-none-eabi-g++
+  CC := $(DEVKITARM)/bin/arm-none-eabi-gcc -fno-builtin
+  CXX := $(DEVKITARM)/bin/arm-none-eabi-g++ -fno-builtin
   LD := $(CXX)
 endif
 
@@ -498,8 +498,8 @@ ifeq ($(TARGET_N3DS),1)
   CTRULIB  :=  $(DEVKITPRO)/libctru
   LIBDIRS  := $(CTRULIB)
   export LIBPATHS  :=  $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
-  PLATFORM_CFLAGS  := -mtp=soft -DTARGET_N3DS -DARM11 -DosGetTime=n64_osGetTime -D_3DS -march=armv6k -mtune=mpcore -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math $(foreach dir,$(LIBDIRS),-I$(dir)/include) -flto=auto -fno-builtin
-  PLATFORM_LDFLAGS := $(LIBPATHS) -lcitro3d -lctru -lm -specs=3dsx.specs -g -marm -mthumb-interwork -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -flto=auto -fno-builtin
+  PLATFORM_CFLAGS  := -mtp=soft -DTARGET_N3DS -DARM11 -DosGetTime=n64_osGetTime -D_3DS -march=armv6k+fp -mtune=mpcore -mfloat-abi=hard -mword-relocations -fomit-frame-pointer -ffast-math $(foreach dir,$(LIBDIRS),-I$(dir)/include) -flto=auto -fno-builtin -falign-functions=4 -falign-labels=4 -falign-loops=4 -falign-jumps=4 -funroll-loops
+  PLATFORM_LDFLAGS := $(LIBPATHS) -lcitro3d -lctru -lm -specs=3dsx.specs -g -marm -mthumb-interwork -march=armv6k+fp -mtune=mpcore -mfloat-abi=hard -mtp=soft -flto=auto -fno-builtin -falign-functions=4 -falign-labels=4 -falign-loops=4 -falign-jumps=4 -funroll-loops
   ifeq ($(DISABLE_AUDIO),1)
     PLATFORM_CFLAGS += -DDISABLE_AUDIO
   endif

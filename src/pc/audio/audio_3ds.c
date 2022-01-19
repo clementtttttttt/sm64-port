@@ -7,6 +7,8 @@
 #include "audio_3ds.h"
 #include "audio_3ds_threading.h"
 
+
+
 #ifdef VERSION_EU
 #define SAMPLES_HIGH 656
 #define SAMPLES_LOW 640
@@ -47,18 +49,21 @@ static int audio_3ds_get_desired_buffered(void)
 
 static void audio_3ds_play(const uint8_t *buf, size_t len)
 {
-    if (len > 4096 * 4)
+    if (len > 16384)
         return;
     if (sDspBuffers[sNextBuffer].status != NDSP_WBUF_FREE &&
         sDspBuffers[sNextBuffer].status != NDSP_WBUF_DONE)
         return;
-    sDspBuffers[sNextBuffer].nsamples = len / 4;
+    sDspBuffers[sNextBuffer].nsamples = (len>>3);
     sDspBuffers[sNextBuffer].status = NDSP_WBUF_FREE;
     ndspChnWaveBufAdd(0, &sDspBuffers[sNextBuffer]);
 
     s16* dst = (s16*)sDspBuffers[sNextBuffer].data_vaddr;
-    memcpy(dst, buf, len);
-    DSP_FlushDataCache(dst, len);
+ //   memcpy(dst, buf, len);
+	for(unsigned int i=0;i<(len>>2);++i){
+		((short*)dst)[i]=((short*)buf)[i<<1];
+	}
+	DSP_FlushDataCache(dst, len>>1);
 
     sNextBuffer = (sNextBuffer + 1) % N3DS_DSP_DMA_BUFFER_COUNT;
 }
@@ -78,7 +83,7 @@ static void audio_3ds_loop()
         for (int i = 0; i < 2; i++) {
             create_next_audio_buffer(audio_buffer + i * (num_audio_samples * 2), num_audio_samples);
         }
-        audio_3ds_play((u8 *)audio_buffer, 2 * num_audio_samples * 4);
+        audio_3ds_play((u8 *)audio_buffer, num_audio_samples << 3);
         LightEvent_Signal(&s_event_main);
     }
 }
@@ -93,7 +98,7 @@ static bool audio_3ds_init()
     ndspChnReset(0);
     ndspChnWaveBufClear(0);
     ndspChnSetInterp(0, NDSP_INTERP_LINEAR);
-    ndspChnSetRate(0, 32000);
+    ndspChnSetRate(0, 16000);
     ndspChnSetFormat(0, NDSP_FORMAT_STEREO_PCM16);
 
     float mix[12];
@@ -102,10 +107,10 @@ static bool audio_3ds_init()
     mix[1] = 1.0;
     ndspChnSetMix(0, mix);
 
-    u8* bufferData = linearAlloc(4096 * 4 * N3DS_DSP_DMA_BUFFER_COUNT);
+    u8* bufferData = linearAlloc( N3DS_DSP_DMA_BUFFER_COUNT << 14);
     for (int i = 0; i < N3DS_DSP_DMA_BUFFER_COUNT; i++)
     {
-        sDspBuffers[i].data_vaddr = &bufferData[i * 4096 * 4];
+        sDspBuffers[i].data_vaddr = &bufferData[i << 14];
         sDspBuffers[i].nsamples = 0;
         sDspBuffers[i].status = NDSP_WBUF_FREE;
     }

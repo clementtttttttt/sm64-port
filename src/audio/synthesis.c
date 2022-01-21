@@ -1170,10 +1170,10 @@ u64 *process_envelope(u64 *cmd, struct NoteSubEu *note, struct NoteSynthesisStat
     targetLeft = (note->targetVolLeft << 5);
     targetRight = (note->targetVolRight << 5);
     if (targetLeft == 0) {
-        targetLeft++;
+        ++targetLeft;
     }
     if (targetRight == 0) {
-        targetRight++;
+        ++targetRight;
     }
     synthesisState->curVolLeft = targetLeft;
     synthesisState->curVolRight = targetRight;

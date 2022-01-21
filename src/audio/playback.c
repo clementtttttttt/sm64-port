@@ -527,7 +527,7 @@ s32 build_synthetic_wave(struct Note *note, struct SequenceChannelLayer *seqLaye
     note->waveId = waveId;
     note->sampleCountIndex = sampleCountIndex;
 
-    note->noteSubEu.sound.samples = &gWaveSamples[waveId - 128][sampleCountIndex * 64];
+    note->noteSubEu.sound.samples = &gWaveSamples[waveId - 128][sampleCountIndex << 6];
 
     return sampleCountIndex;
 }
@@ -566,20 +566,19 @@ void build_synthetic_wave(struct Note *note, struct SequenceChannelLayer *seqLay
     // Load wave sample
     note->instOrWave = (u8) seqLayer->seqChannel->instOrWave;
     for (i = -1, pos = 0; pos < 0x40; pos += stepSize) {
-        i++;
-        note->synthesisBuffers->samples[i] = gWaveSamples[seqLayer->seqChannel->instOrWave - 0x80][pos];
+        note->synthesisBuffers->samples[++i] = gWaveSamples[seqLayer->seqChannel->instOrWave - 0x80][pos];
     }
 
     // Repeat sample
     for (offset = note->sampleCount; offset < 0x40; offset += note->sampleCount) {
         lim = note->sampleCount;
         if (offset < 0 || offset > 0) {
-            for (j = 0; j < lim; j++) {
-                note->synthesisBuffers->samples[offset + j] = note->synthesisBuffers->samples[j];
+            for (j = 0; j < lim;) {
+                note->synthesisBuffers->samples[offset + ++j] = note->synthesisBuffers->samples[j];
             }
         } else {
-            for (j = 0; j < lim; j++) {
-                note->synthesisBuffers->samples[offset + j] = note->synthesisBuffers->samples[j];
+            for (j = 0; j < lim;) {
+                note->synthesisBuffers->samples[offset + ++j] = note->synthesisBuffers->samples[j];
             }
         }
     }
@@ -678,7 +677,6 @@ void note_pool_clear(struct NotePool *pool) {
             audio_list_push_back(dest, cur);
         }
 #else
-        j = 0;
         do {
             cur = source->next;
             if (cur == source) {
@@ -686,21 +684,20 @@ void note_pool_clear(struct NotePool *pool) {
             }
             audio_list_remove(cur);
             audio_list_push_back(dest, cur);
-            j++;
-        } while (j <= gMaxSimultaneousNotes);
+        } while (++j <= gMaxSimultaneousNotes);
 #endif
     }
 }
 
 void note_pool_fill(struct NotePool *pool, s32 count) {
-    s32 i;
-    s32 j;
+    s32 i=0;
+    s32 j=0;
     struct Note *note;
     struct AudioListItem *source;
     struct AudioListItem *dest;
 
     note_pool_clear(pool);
-
+/*
     for (i = 0, j = 0; j < count; i++) {
         if (i == 4) {
             return;
@@ -727,7 +724,7 @@ void note_pool_fill(struct NotePool *pool, s32 count) {
                 dest = &pool->active;
                 break;
         }
-
+		
         while (j < count) {
             note = audio_list_pop_back(source);
             if (note == NULL) {
@@ -737,6 +734,18 @@ void note_pool_fill(struct NotePool *pool, s32 count) {
             j++;
         }
     }
+*/
+		source = &gNoteFreeLists.disabled;
+		dest = &pool->disabled;
+        while (j < count) {
+            note = audio_list_pop_back(source);
+            if (note == NULL) {
+                break;
+            }
+            audio_list_push_back(dest, &note->listItem);
+            j++;
+        }
+				
 }
 
 void audio_list_push_front(struct AudioListItem *list, struct AudioListItem *item) {

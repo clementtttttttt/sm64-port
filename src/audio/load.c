@@ -823,22 +823,7 @@ void load_sequence_internal(u32 player, u32 seqId, s32 loadAsync) {
     }
 
     sequence_player_disable(seqPlayer);
-    if (loadAsync) {
-        s32 numMissingBanks = 0;
-        s32 dummy = 0;
-        s32 bankId = get_missing_bank(seqId, &dummy, &numMissingBanks);
-        if (numMissingBanks == 1) {
-            if (bank_load_async(bankId, 2, seqPlayer) == NULL) {
-                return;
-            }
-            // @bug This should set the last bank (i.e. the first in the JSON)
-            // as default, not the missing one. This code path never gets
-            // taken, though -- all sequence loading is synchronous.
-            seqPlayer->defaultBank[0] = bankId;
-        } else if (load_banks_immediate(seqId, &seqPlayer->defaultBank[0]) == NULL) {
-            return;
-        }
-    } else if (load_banks_immediate(seqId, &seqPlayer->defaultBank[0]) == NULL) {
+    if (load_banks_immediate(seqId, &seqPlayer->defaultBank[0]) == NULL) {
         return;
     }
 

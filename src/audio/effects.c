@@ -418,7 +418,7 @@ s32 adsr_update(struct AdsrState *adsr) {
                     adsr->velocity = ((adsr->target - adsr->current) << 0x10) / adsr->delay;
 #endif
                     adsr->state = ADSR_STATE_FADE;
-                    adsr->envIndex++;
+                    ++adsr->envIndex;
                     break;
             }
             if (adsr->state != ADSR_STATE_FADE) {
@@ -454,7 +454,7 @@ s32 adsr_update(struct AdsrState *adsr) {
 #ifdef VERSION_EU
                     adsr->delay = 128;
 #else
-                    adsr->delay = adsr->sustain / 16;
+                    adsr->delay = adsr->sustain >> 4;
 #endif
                     adsr->state = ADSR_STATE_SUSTAIN;
                 }
@@ -476,8 +476,7 @@ s32 adsr_update(struct AdsrState *adsr) {
         }
 
         case ADSR_STATE_SUSTAIN:
-            adsr->delay -= 1;
-            if (adsr->delay == 0) {
+            if (--adsr->delay == 0) {
                 adsr->state = ADSR_STATE_RELEASE;
             }
             break;

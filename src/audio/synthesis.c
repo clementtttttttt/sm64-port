@@ -160,7 +160,7 @@ void prepare_reverb_ring_buffer(s32 chunkLen, u32 updateIndex) {
                 gSynthesisReverb.ringBuffer.right[dstPos + item->startPos] =
                     item->toDownsampleRight[srcPos];
             }
-            for (dstPos = 0; dstPos < item->lengthB / 2; srcPos += gReverbDownsampleRate, dstPos++) {
+            for (dstPos = 0; dstPos < (item->lengthB >> 1); srcPos += gReverbDownsampleRate, dstPos++) {
                 gSynthesisReverb.ringBuffer.left[dstPos] = item->toDownsampleLeft[srcPos];
                 gSynthesisReverb.ringBuffer.right[dstPos] = item->toDownsampleRight[srcPos];
             }
@@ -218,10 +218,10 @@ void synthesis_load_note_subs_eu(s32 updateIndex) {
     struct NoteSubEu *src;
     struct NoteSubEu *dest;
     s32 i;
-
-    for (i = 0; i < gMaxSimultaneousNotes; i++) {
+	u32 idx2=gMaxSimultaneousNotes * updateIndex;
+    for (i = 0; i < gMaxSimultaneousNotes; ++i) {
         src = &gNotes[i].noteSubEu;
-        dest = &gNoteSubsEu[gMaxSimultaneousNotes * updateIndex + i];
+        dest = &gNoteSubsEu[idx2 + i];
         if (src->enabled) {
             *dest = *src;
             src->needsInit = 0;

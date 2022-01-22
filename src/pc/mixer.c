@@ -3,15 +3,21 @@
 #include <ultra64.h>
 #include "armdsp.h"
 
-inline void *memcpy(int *dst, const int *src, size_t size) {
-    u8 *_dst = dst;
-    for(int i=0;i<(size>>2);++i){
+
+inline void *memcpy(s64 *dst, const s64 *src, size_t size) {
+	if(((s32)src&0b111)||((s32)dst&0b111)){
+		for(int i=0;i<(size>>2);++i){
+			((s32*)dst)[i]=((s32*)src)[i];
+		}
+	
+	}
+	else
+    for(int i=0;i<(size>>3);++i){
 			dst[i]=src[i];
 	}
 	
     return dst;
 }
-
 
 
 #define HAS_SSE41 0
@@ -53,14 +59,14 @@ static struct {
     int16_t vol_dry;
     int16_t vol_wet;
 
-    ADPCM_STATE *adpcm_loop_state;
+    ADPCM_STATE *adpcm_loop_state __attribute__ ((aligned (8)));
 
     int16_t adpcm_table[8][2][8];
     union {
         int16_t as_s16[2512 / sizeof(int16_t)];
         uint8_t as_u8[2512];
-    } buf;
-} rspa;
+    } buf __attribute__ ((aligned (8)));
+} rspa __attribute__ ((aligned (8)));
 
 static int16_t resample_table[64][4] = {
     {0x0c39, 0x66ad, 0x0d46, 0xffdf}, {0x0b39, 0x6696, 0x0e5f, 0xffd8},
@@ -264,7 +270,7 @@ void aADPCMdecImpl(uint8_t flags, ADPCM_STATE state) {
 }
 
 void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
-    int16_t tmp[16];
+    int16_t tmp[16] __attribute__ ((aligned (8)));
     int16_t *in_initial = rspa.buf.as_s16 + rspa.in / sizeof(int16_t);
     int16_t *in = in_initial;
     int16_t *out = rspa.buf.as_s16 + rspa.out / sizeof(int16_t);

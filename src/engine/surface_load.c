@@ -299,6 +299,13 @@ static void stub_surface_load_1(void) {
  * @param vertexData The raw data containing vertex positions
  * @param vertexIndices Helper which tells positions in vertexData to start reading vertices
  */
+ __attribute__((__always_inline__)) static float __sqrtf(float f) {
+      __asm__ __volatile__(
+
+      "vsqrt.f32 %0, %0"
+      : "+w"(f));
+      return f;
+    }
 static struct Surface *read_surface_data(s16 *vertexData, s16 **vertexIndices) {
     struct Surface *surface;
     register s32 x1, y1, z1;
@@ -329,7 +336,7 @@ static struct Surface *read_surface_data(s16 *vertexData, s16 **vertexIndices) {
     nx = (y2 - y1) * (z3 - z2) - (z2 - z1) * (y3 - y2);
     ny = (z2 - z1) * (x3 - x2) - (x2 - x1) * (z3 - z2);
     nz = (x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2);
-    mag = sqrtf(nx * nx + ny * ny + nz * nz);
+    mag = __sqrtf(nx * nx + ny * ny + nz * nz);
 
     // Could have used min_3 and max_3 for this...
     minY = y1;

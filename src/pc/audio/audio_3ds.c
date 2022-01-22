@@ -35,8 +35,7 @@ static int audio_3ds_buffered(void)
     int total = 0;
     for (int i = 0; i < N3DS_DSP_DMA_BUFFER_COUNT; i++)
     {
-        if (sDspBuffers[i].status == NDSP_WBUF_QUEUED ||
-            sDspBuffers[i].status == NDSP_WBUF_PLAYING)
+        if (sDspBuffers[i].status == NDSP_WBUF_QUEUED || sDspBuffers[i].status == NDSP_WBUF_PLAYING)
             total += sDspBuffers[i].nsamples;
     }
     return total;

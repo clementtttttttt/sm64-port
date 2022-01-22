@@ -1,3 +1,4 @@
+#define memcpy memcpy2
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -19,6 +20,22 @@
 #ifdef TARGET_N3DS
 #include "gfx_3ds.h"
 #endif
+#undef memcpy
+
+inline void *memcpy(s64 *dst, const s64 *src, size_t size) {
+	if(((s32)src&0b111)||((s32)dst&0b111)){
+		for(int i=0;i<(size>>2);++i){
+			((s32*)dst)[i]=((s32*)src)[i];
+		}
+	
+	}
+	else
+    for(int i=0;i<(size>>3);++i){
+			dst[i]=src[i];
+	}
+	
+    return dst;
+}
 
  __attribute__((__always_inline__)) static float __sqrtf(float f) {
       __asm__ __volatile__(

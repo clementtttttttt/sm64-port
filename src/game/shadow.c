@@ -18,7 +18,13 @@
 #define find_floor_height_and_data 0.4 + find_floor_height_and_data
 #define find_water_level -1.4 + find_water_level
 #endif
+ __attribute__((__always_inline__)) static float __sqrtf(float f) {
+      __asm__ __volatile__(
 
+      "vsqrt.f32 %0, %0"
+      : "+w"(f));
+      return f;
+    }
 /**
  * @file shadow.c
  * This file implements a self-contained subsystem used to draw shadows.
@@ -247,7 +253,7 @@ s8 init_shadow(struct Shadow *s, f32 xPos, f32 yPos, f32 zPos, s16 shadowScale, 
 
     s->floorDownwardAngle = atan2_deg(s->floorNormalZ, s->floorNormalX);
 
-    floorSteepness = sqrtf(s->floorNormalX * s->floorNormalX + s->floorNormalZ * s->floorNormalZ);
+    floorSteepness = __sqrtf(s->floorNormalX * s->floorNormalX + s->floorNormalZ * s->floorNormalZ);
 
     // This if-statement avoids dividing by 0.
     if (floorSteepness == 0.0) {

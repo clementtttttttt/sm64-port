@@ -18,7 +18,13 @@
 #else
 #define EU_FLOAT(x) x
 #endif
+ __attribute__((__always_inline__)) static float __sqrtf(float f) {
+      __asm__ __volatile__(
 
+      "vsqrt.f32 %0, %0"
+      : "+w"(f));
+      return f;
+    }
 #ifdef VERSION_EU
 u8 audioString1[] = "pitch %x: delaybytes %d : olddelay %d\n";
 u8 audioString2[] = "cont %x: delaybytes %d : olddelay %d\n";
@@ -930,7 +936,7 @@ void process_sound_request(u32 bits, f32 *pos) {
 
     if (gSoundBanks[bankIndex][D_803320B0[bankIndex]].next != 0xff && index != 0) {
         index = D_803320B0[bankIndex];
-        dist = sqrtf(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]) * one;
+        dist = __sqrtf(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]) * one;
         gSoundBanks[bankIndex][index].x = &pos[0];
         gSoundBanks[bankIndex][index].y = &pos[1];
         gSoundBanks[bankIndex][index].z = &pos[2];

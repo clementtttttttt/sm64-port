@@ -28,7 +28,13 @@
 #include "paintings.h"
 #include "engine/graph_node.h"
 #include "level_table.h"
+ __attribute__((__always_inline__)) static float __sqrtf(float f) {
+      __asm__ __volatile__(
 
+      "vsqrt.f32 %0, %0"
+      : "+w"(f));
+      return f;
+    }
 #define CBUTTON_MASK (U_CBUTTONS | D_CBUTTONS | L_CBUTTONS | R_CBUTTONS)
 
 /**
@@ -3597,7 +3603,7 @@ void evaluate_cubic_spline(f32 u, Vec3f Q, Vec3f a0, Vec3f a1, Vec3f a2, Vec3f a
     y = B[0] * a0[1] + B[1] * a1[1] + B[2] * a2[1] + B[3] * a3[1];
     z = B[0] * a0[2] + B[1] * a1[2] + B[2] * a2[2] + B[3] * a3[2];
 
-    unusedSplinePitch = atan2s(sqrtf(x * x + z * z), y);
+    unusedSplinePitch = atan2s(__sqrtf(x * x + z * z), y);
     unusedSplineYaw = atan2s(z, x);
 }
 
@@ -4272,7 +4278,7 @@ s16 reduce_by_dist_from_camera(s16 value, f32 maxDist, f32 posX, f32 posY, f32 p
     f32 goalDY = gLakituState.goalPos[1] - posY;
     f32 goalDZ = gLakituState.goalPos[2] - posZ;
 
-    dist = sqrtf(goalDX * goalDX + goalDY * goalDY + goalDZ * goalDZ);
+    dist = __sqrtf(goalDX * goalDX + goalDY * goalDY + goalDZ * goalDZ);
     if (maxDist > dist) {
         pos[0] = posX;
         pos[1] = posY;
@@ -4514,7 +4520,7 @@ s16 calculate_pitch(Vec3f from, Vec3f to) {
     f32 dx = to[0] - from[0];
     f32 dy = to[1] - from[1];
     f32 dz = to[2] - from[2];
-    s16 pitch = atan2s(sqrtf(dx * dx + dz * dz), dy);
+    s16 pitch = atan2s(__sqrtf(dx * dx + dz * dz), dy);
 
     return pitch;
 }
@@ -4536,7 +4542,7 @@ void calculate_angles(Vec3f from, Vec3f to, s16 *pitch, s16 *yaw) {
     f32 dy = to[1] - from[1];
     f32 dz = to[2] - from[2];
 
-    *pitch = atan2s(sqrtf(dx * dx + dz * dz), dy);
+    *pitch = atan2s(__sqrtf(dx * dx + dz * dz), dy);
     *yaw = atan2s(dz, dx);
 }
 
@@ -4547,7 +4553,7 @@ f32 calc_abs_dist(Vec3f a, Vec3f b) {
     f32 distX = b[0] - a[0];
     f32 distY = b[1] - a[1];
     f32 distZ = b[2] - a[2];
-    f32 distAbs = sqrtf(distX * distX + distY * distY + distZ * distZ);
+    f32 distAbs = __sqrtf(distX * distX + distY * distY + distZ * distZ);
 
     return distAbs;
 }
@@ -4558,7 +4564,7 @@ f32 calc_abs_dist(Vec3f a, Vec3f b) {
 f32 calc_hor_dist(Vec3f a, Vec3f b) {
     f32 distX = b[0] - a[0];
     f32 distZ = b[2] - a[2];
-    f32 distHor = sqrtf(distX * distX + distZ * distZ);
+    f32 distHor = __sqrtf(distX * distX + distZ * distZ);
 
     return distHor;
 }

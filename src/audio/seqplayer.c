@@ -562,8 +562,6 @@ void seq_channel_layer_process_script(struct SequenceChannelLayer *layer) {
                         layer->instrument = NULL;
                     }
 
-                    if (1) {
-                    }
 
                     if (cmd == 0xff) {
                         layer->adsr.releaseRate = 0;
@@ -1990,13 +1988,10 @@ void process_sequences(UNUSED s32 iterationsRemaining) {
     s32 i;
     for (i = 0; i < SEQUENCE_PLAYERS; i++) {
         if (gSequencePlayers[i].enabled == TRUE) {
-#ifdef VERSION_EU
-            sequence_player_process_sequence(&gSequencePlayers[i]);
-            sequence_player_process_sound(&gSequencePlayers[i]);
-#else
+
             sequence_player_process_sequence(gSequencePlayers + i);
             sequence_player_process_sound(gSequencePlayers + i);
-#endif
+
         }
     }
 #ifndef VERSION_EU

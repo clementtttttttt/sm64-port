@@ -446,87 +446,6 @@ struct SequenceChannelLayer // Maybe SequenceTrack?
 #endif
 }; // size = 0x80
 
-#ifdef VERSION_EU
-struct NoteSynthesisState
-{
-    /*0x00*/ u8 restart;
-    /*0x01*/ u8 sampleDmaIndex;
-    /*0x02*/ u8 prevHeadsetPanRight;
-    /*0x03*/ u8 prevHeadsetPanLeft;
-    /*0x04*/ u16 samplePosFrac;
-    /*0x08*/ s32 samplePosInt;
-    /*0x0C*/ struct NoteSynthesisBuffers *synthesisBuffers;
-    /*0x10*/ s16 curVolLeft;
-    /*0x12*/ s16 curVolRight;
-};
-struct NotePlaybackState
-{
-    /* U/J, EU  */
-    /*0x04, 0x00*/ u8 priority;
-    /*      0x01*/ u8 waveId;
-    /*      0x02*/ u8 sampleCountIndex;
-    /*0x08, 0x04*/ s16 adsrVolScale;
-    /*0x18, 0x08*/ f32 portamentoFreqScale;
-    /*0x1C, 0x0C*/ f32 vibratoFreqScale;
-    /*0x28, 0x10*/ struct SequenceChannelLayer *prevParentLayer;
-    /*0x2C, 0x14*/ struct SequenceChannelLayer *parentLayer;
-    /*0x30, 0x18*/ struct SequenceChannelLayer *wantedParentLayer;
-    /*    , 0x1C*/ struct NoteAttributes attributes;
-    /*0x54, 0x28*/ struct AdsrState adsr;
-    /*0x74, 0x4C*/ struct Portamento portamento;
-    /*0x84, 0x5C*/ struct VibratoState vibratoState;
-};
-struct NoteSubEu
-{
-    /*0x00*/ volatile u8 enabled : 1;
-    /*0x00*/ u8 needsInit : 1;
-    /*0x00*/ u8 finished : 1;
-    /*0x00*/ u8 envMixerNeedsInit : 1;
-    /*0x00*/ u8 stereoStrongRight : 1;
-    /*0x00*/ u8 stereoStrongLeft : 1;
-    /*0x00*/ u8 stereoHeadsetEffects : 1;
-    /*0x00*/ u8 usesHeadsetPanEffects : 1;
-    /*0x01*/ u8 reverbIndex : 3;
-    /*0x01*/ u8 bookOffset : 3;
-    /*0x01*/ u8 isSyntheticWave : 1;
-    /*0x01*/ u8 hasTwoAdpcmParts : 1;
-    /*0x02*/ u8 bankId;
-    /*0x03*/ u8 headsetPanRight;
-    /*0x04*/ u8 headsetPanLeft;
-    /*0x05*/ u8 reverbVol;
-    /*0x06*/ u16 targetVolLeft;
-    /*0x08*/ u16 targetVolRight;
-    /*0x0A*/ u16 resamplingRateFixedPoint; // stored as signed but loaded as u16
-    /*0x0C*/ union {
-        s16 *samples;
-        struct AudioBankSound *audioBankSound;
-    } sound;
-};
-struct Note
-{
-    /* U/J, EU  */
-    /*0xA4, 0x00*/ struct AudioListItem listItem;
-    /*      0x10*/ struct NoteSynthesisState synthesisState;
-#ifdef TARGET_N64
-    u8 pad0[12];
-#endif
-    /*0x04, 0x30*/ u8 priority;
-    /*      0x31*/ u8 waveId;
-    /*      0x32*/ u8 sampleCountIndex;
-    /*0x08, 0x34*/ s16 adsrVolScale;
-    /*0x18, 0x38*/ f32 portamentoFreqScale;
-    /*0x1C, 0x3C*/ f32 vibratoFreqScale;
-    /*0x28, 0x40*/ struct SequenceChannelLayer *prevParentLayer;
-    /*0x2C, 0x44*/ struct SequenceChannelLayer *parentLayer;
-    /*0x30, 0x48*/ struct SequenceChannelLayer *wantedParentLayer;
-    /*    , 0x4C*/ struct NoteAttributes attributes;
-    /*0x54, 0x58*/ struct AdsrState adsr;
-    /*0x74, 0x7C*/ struct Portamento portamento;
-    /*0x84, 0x8C*/ struct VibratoState vibratoState;
-    u8 pad3[8];
-    /*    , 0xB0*/ struct NoteSubEu noteSubEu;
-}; // size = 0xC0
-#else
 struct vNote
 {
     /* U/J, EU  */
@@ -582,7 +501,6 @@ struct Note
     /*0xA4, 0x00*/ struct AudioListItem listItem;
     /*          */ u8 pad2[0xc];
 }; // size = 0xC0
-#endif
 
 struct NoteSynthesisBuffers
 {

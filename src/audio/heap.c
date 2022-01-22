@@ -103,8 +103,7 @@ f64 kth_root(f64 d, s32 k) {
         root = 1.0;
     } else {
         for (i = 0; i < 64; i++) {
-            if (1) {
-            }
+
             next = root_newton_step(root, k, d);
             diff = next - root;
 
@@ -473,16 +472,10 @@ void *alloc_bank_or_seq(struct SoundMultiPool *arg0, s32 arg1, s32 size, s32 arg
         return ret;
     }
 
-#ifdef VERSION_EU
-    ret = soundAlloc(&arg0->persistent.pool, arg1 * size);
-    arg0->persistent.entries[arg0->persistent.numEntries].ptr = ret;
 
-    if (ret == NULL)
-#else
     persistent->entries[persistent->numEntries].ptr = soundAlloc(&persistent->pool, arg1 * size);
 
     if (persistent->entries[persistent->numEntries].ptr == NULL)
-#endif
     {
         switch (arg3) {
             case 2:
@@ -700,16 +693,12 @@ void audio_reset_session(void) {
         frames = 0;
         for (;;) {
             wait_for_audio_frames(1);
-            frames++;
-            if (frames > 4 * 60) {
+            if (++frames > 240) {
                 // Break after 4 seconds
                 break;
             }
 
-            for (i = 0; i < gMaxSimultaneousNotes; i++) {
-                if (gNotes[i].enabled)
-                    break;
-            }
+            for (i = 0; i < gMaxSimultaneousNotes&&!gNotes[i].enabled; ++i);
 
             if (i == gMaxSimultaneousNotes) {
                 // All zero, break early

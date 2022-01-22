@@ -267,7 +267,7 @@ static void geo_process_perspective(struct GraphNodePerspective *node) {
  * range of this node.
  */
 static void geo_process_level_of_detail(struct GraphNodeLevelOfDetail *node) {
-#ifdef GBI_FLOATS
+/*#ifdef GBI_FLOATS
     Mtx *mtx = gMatStackFixed[gMatStackIndex];
     s16 distanceFromCam = (s32) -mtx->m[3][2]; // z-component of the translation column
 #else
@@ -280,9 +280,10 @@ static void geo_process_level_of_detail(struct GraphNodeLevelOfDetail *node) {
 #ifndef TARGET_N64
     // We assume modern hardware is powerful enough to draw the most detailed variant
 #endif
+*/
+    if (node->minDistance <= 0 && 0 < node->maxDistance) {
 
-    if (node->minDistance <= distanceFromCam && distanceFromCam < node->maxDistance) {
-        if (node->node.children != 0) {
+		if (node->node.children != 0) {
             geo_process_node_and_siblings(node->node.children);
         }
     }

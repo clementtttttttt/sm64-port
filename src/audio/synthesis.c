@@ -1170,10 +1170,10 @@ u64 *process_envelope(u64 *cmd, struct NoteSubEu *note, struct NoteSynthesisStat
     targetLeft = (note->targetVolLeft << 5);
     targetRight = (note->targetVolRight << 5);
     if (targetLeft == 0) {
-        ++targetLeft;
+        targetLeft|=1;
     }
     if (targetRight == 0) {
-        ++targetRight;
+        targetRight|=1;
     }
     synthesisState->curVolLeft = targetLeft;
     synthesisState->curVolRight = targetRight;
@@ -1480,10 +1480,10 @@ void note_set_vel_pan_reverb(struct Note *note, f32 velocity, f32 pan, u8 reverb
     note->targetVolRight = (u16)(s32)(velocity * volRight) & ~0x80FF;
 #endif
     if (note->targetVolLeft == 0) {
-        note->targetVolLeft++;
+        note->targetVolLeft|=1;
     }
     if (note->targetVolRight == 0) {
-        note->targetVolRight++;
+        note->targetVolRight|=1;
     }
     if (note->reverb != reverb) {
         note->reverb = reverb;
@@ -1492,16 +1492,14 @@ void note_set_vel_pan_reverb(struct Note *note, f32 velocity, f32 pan, u8 reverb
         return;
     }
 
-    if (note->needsInit) {
-        note->envMixerNeedsInit = TRUE;
-    } else {
-        note->envMixerNeedsInit = FALSE;
-    }
+	note->envMixerNeedsInit = note->needsInit;
+
 }
 
-void note_set_frequency(struct Note *note, f32 frequency) {
+/*void note_set_frequency(struct Note *note, f32 frequency) {
     note->frequency = frequency;
-}
+}*/
+#define note_set_frequency(note,frequency) note->frequency = frequency;
 
 void note_enable(struct Note *note) {
     note->enabled = TRUE;

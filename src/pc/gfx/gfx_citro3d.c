@@ -378,7 +378,6 @@ static uint32_t gfx_citro3d_new_texture(void)
 {
     if (sTextureIndex == TEXTURE_POOL_SIZE)
     {
-        printf("Out of textures!\n");
         return 0;
     }
     return sTextureIndex++;
@@ -428,7 +427,6 @@ static void gfx_citro3d_upload_texture(const uint8_t *rgba32_buf, int width, int
         u32 newHeight = height < 8 ? 8 : (1 << (32 - __builtin_clz(height - 1)));
         if (newWidth * newHeight * 4 > sizeof(sTexBuf))
         {
-            printf("Tex buffer overflow!\n");
             return;
         }
         int offs = 0;
@@ -438,8 +436,8 @@ static void gfx_citro3d_upload_texture(const uint8_t *rgba32_buf, int width, int
             {
                 for (int i = 0; i < 64; i++)
                 {
-                    int x2 = i % 8;
-                    int y2 = i / 8;
+                    int x2 = i & 0b111;
+                    int y2 = i >> 3;
 
                     int realX = x + x2;
                     if (realX >= width)
@@ -449,7 +447,7 @@ static void gfx_citro3d_upload_texture(const uint8_t *rgba32_buf, int width, int
                     if (realY >= height)
                         realY -= height;
 
-                    int pos = sTileOrder[x2 % 4 + y2 % 4 * 4] + 16 * (x2 / 4) + 32 * (y2 / 4);
+                    int pos = sTileOrder[(x2 & 0b11) + (y2 & 0b11) * 4] + 16 * (x2 / 4) + 32 * (y2 / 4);
                     u32 c = ((u32*)rgba32_buf)[realY * width + realX];
                     ((u32*)sTexBuf)[offs + pos] = ((c & 0xFF) << 24) | (((c >> 8) & 0xFF) << 16) | (((c >> 16) & 0xFF) << 8) | (c >> 24);
                 }
@@ -539,16 +537,16 @@ static void gfx_citro3d_set_scissor(int x, int y, int width, int height)
     scissor = true;
     if (gGfx3DSMode == GFX_3DS_MODE_AA_22 || gGfx3DSMode == GFX_3DS_MODE_WIDE_AA_12)
     {
-        scissor_x = x * 2;
-        scissor_y = y * 2;
-        scissor_width = (x + width) * 2;
-        scissor_height = (y + height) * 2;
+        scissor_x = x << 1;
+        scissor_y = y << 1;
+        scissor_width = (x + width) << 1;
+        scissor_height = (y + height) << 1;
     }
     else if (gGfx3DSMode == GFX_3DS_MODE_WIDE)
     {
-        scissor_x = x * 2;
+        scissor_x = x << 1;
         scissor_y = y;
-        scissor_width = (x + width) * 2;
+        scissor_width = (x + width) << 1;
         scissor_height = y + height;
     }
     else // gGfx3DSMode == GFX_3DS_MODE_NORMAL
@@ -617,8 +615,7 @@ static void renderTwoColorTris(float buf_vbo[], size_t buf_vbo_len, size_t buf_v
     for (u32 i = 0; i < buf_vbo_num_tris * 3 && color0Constant && color1Constant; i++)
     {
         int vtxOffs = 4;
-        if (hasTex)
-            vtxOffs += 2;
+		vtxOffs += hasTex << 1;
         u32 color0 = vec4ToU32Color(
             buf_vbo[offset + vtxOffs],
             buf_vbo[offset + vtxOffs + 1],
@@ -649,37 +646,39 @@ static void renderTwoColorTris(float buf_vbo[], size_t buf_vbo_len, size_t buf_v
     C3D_TexEnvColor(C3D_GetTexEnv(0), color1Constant ? firstColor1 : firstColor0);
     for (u32 i = 0; i < 3 * buf_vbo_num_tris; i++)
     {
-        *dst++ = buf_vbo[offset + 0];
-        *dst++ = buf_vbo[offset + 1];
-        *dst++ = buf_vbo[offset + 2];
-        *dst++ = buf_vbo[offset + 3];
+		--dst;
+        *++dst = buf_vbo[offset + 0];
+        *++dst = buf_vbo[offset + 1];
+        *++dst = buf_vbo[offset + 2];
+        *++dst = buf_vbo[offset + 3];
         int vtxOffs = 4;
         if (hasTex)
         {
-            *dst++ = buf_vbo[offset + vtxOffs++] * sTexturePoolScaleS[sCurTex];
-            *dst++ = 1 - (buf_vbo[offset + vtxOffs++] * sTexturePoolScaleT[sCurTex]);
+            *++dst = buf_vbo[offset + vtxOffs++] * sTexturePoolScaleS[sCurTex];
+            *++dst = 1 - (buf_vbo[offset + vtxOffs++] * sTexturePoolScaleT[sCurTex]);
         }
         else
         {
-            *dst++ = 0;
-            *dst++ = 0;
+            *++dst = 0;
+            *++dst = 0;
         }
         if (color0Constant)
             vtxOffs += hasAlpha ? 4 : 3;
         if (hasColor)
         {
-            *dst++ = buf_vbo[offset + vtxOffs++];
-            *dst++ = buf_vbo[offset + vtxOffs++];
-            *dst++ = buf_vbo[offset + vtxOffs++];
-            *dst++ = hasAlpha ? buf_vbo[offset + vtxOffs++] : 1.0f;
+            *++dst = buf_vbo[offset + vtxOffs++];
+            *++dst = buf_vbo[offset + vtxOffs++];
+            *++dst = buf_vbo[offset + vtxOffs++];
+            *++dst = hasAlpha ? buf_vbo[offset + vtxOffs++] : 1.0f;
         }
         else
         {
-            *dst++ = 1.0f;
-            *dst++ = 1.0f;
-            *dst++ = 1.0f;
-            *dst++ = 1.0f;
+            *++dst = 1.0f;
+            *++dst = 1.0f;
+            *++dst = 1.0f;
+            *++dst = 1.0f;
         }
+        ++dst;
 
         offset += sVtxUnitSize;
     }
@@ -690,9 +689,8 @@ static void renderTwoColorTris(float buf_vbo[], size_t buf_vbo_len, size_t buf_v
 
 static void gfx_citro3d_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size_t buf_vbo_num_tris)
 {
-    if (sBufIdx * VERTEX_SHADER_SIZE > 1 * 1024 * 1024 / 4)
+    if (sBufIdx * VERTEX_SHADER_SIZE > 262144)
     {
-        printf("Vertex buffer full!\n");
         return;
     }
 
@@ -709,35 +707,37 @@ static void gfx_citro3d_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size
     bool hasAlpha = sShaderProgramPool[sCurShader].cc_features.opt_alpha;
     for (u32 i = 0; i < 3 * buf_vbo_num_tris; i++)
     {
-        *dst++ = buf_vbo[offset + 0];
-        *dst++ = buf_vbo[offset + 1];
-        *dst++ = buf_vbo[offset + 2];
-        *dst++ = buf_vbo[offset + 3];
+		--dst;
+        *++dst = buf_vbo[offset + 0];
+        *++dst = buf_vbo[offset + 1];
+        *++dst = buf_vbo[offset + 2];
+        *++dst = buf_vbo[offset + 3];
         int vtxOffs = 4;
         if (hasTex)
         {
-            *dst++ = buf_vbo[offset + vtxOffs++] * sTexturePoolScaleS[sCurTex];
-            *dst++ = 1 - (buf_vbo[offset + vtxOffs++] * sTexturePoolScaleT[sCurTex]);
+            *++dst = buf_vbo[offset + vtxOffs++] * sTexturePoolScaleS[sCurTex];
+            *++dst = 1 - (buf_vbo[offset + vtxOffs++] * sTexturePoolScaleT[sCurTex]);
         }
         else
         {
-            *dst++ = 0;
-            *dst++ = 0;
+            *++dst = 0;
+            *++dst = 0;
         }
         if (hasColor)
         {
-            *dst++ = buf_vbo[offset + vtxOffs++];
-            *dst++ = buf_vbo[offset + vtxOffs++];
-            *dst++ = buf_vbo[offset + vtxOffs++];
-            *dst++ = hasAlpha ? buf_vbo[offset + vtxOffs++] : 1.0f;
+            *++dst = buf_vbo[offset + vtxOffs++];
+            *++dst = buf_vbo[offset + vtxOffs++];
+            *++dst = buf_vbo[offset + vtxOffs++];
+            *++dst = hasAlpha ? buf_vbo[offset + vtxOffs++] : 1.0f;
         }
         else
         {
-            *dst++ = 1.0f;
-            *dst++ = 1.0f;
-            *dst++ = 1.0f;
-            *dst++ = 1.0f;
+            *++dst = 1.0f;
+            *++dst = 1.0f;
+            *++dst = 1.0f;
+            *++dst = 1.0f;
         }
+        ++dst;
 
         offset += sVtxUnitSize;
     }
@@ -794,12 +794,12 @@ static void gfx_citro3d_init(void)
     AttrInfo_AddLoader(attrInfo, 2, GPU_FLOAT, 4); // v2=color
 
     // Create 1MB VBO (vertex buffer object)
-    sVboBuffer = linearAlloc(1 * 1024 * 1024);
+    sVboBuffer = linearAlloc(1048576);
 
     // Configure buffers
     C3D_BufInfo* bufInfo = C3D_GetBufInfo();
     BufInfo_Init(bufInfo);
-    BufInfo_Add(bufInfo, sVboBuffer, VERTEX_SHADER_SIZE * 4, 3, 0x210);
+    BufInfo_Add(bufInfo, sVboBuffer, VERTEX_SHADER_SIZE << 2, 3, 0x210);
 
     C3D_CullFace(GPU_CULL_NONE);
     C3D_DepthMap(true, -1.0f, 0);
@@ -875,7 +875,6 @@ static void gfx_citro3d_set_fog(uint16_t from, uint16_t to)
     // new lut required
     if (fog_lut_size == FOG_LUT_SIZE)
     {
-        printf("Fog exhausted!\n");
         return;
     }
 

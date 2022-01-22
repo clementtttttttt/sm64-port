@@ -20,6 +20,14 @@
 #include "gfx_3ds.h"
 #endif
 
+ __attribute__((__always_inline__)) static float __sqrtf(float f) {
+      __asm__ __volatile__(
+
+      "vsqrt.f32 %0, %0"
+      : "+w"(f));
+      return f;
+    }
+
 #define SUPPORT_CHECK(x) assert(x)
 
 // SCALE_M_N: upscale/downscale M-bit integer to N-bit
@@ -523,7 +531,7 @@ static void import_texture(int tile) {
 }
 
 static void gfx_normalize_vector(float v[3]) {
-    float s = sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    float s = __sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
     v[0] /= s;
     v[1] /= s;
     v[2] /= s;
@@ -1359,7 +1367,7 @@ static void gfx_dp_fill_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t
     }
 
     for (int i = MAX_VERTICES; i < MAX_VERTICES + 4; i++) {
-        struct LoadedVertex* v = &rsp.loaded_vertices[i];
+        struct LoadedVertex * v=&rsp.loaded_vertices[i];
         v->color = rdp.fill_color;
     }
 
@@ -1664,7 +1672,7 @@ void gfx_init(struct GfxWindowManagerAPI *wapi, struct GfxRenderingAPI *rapi, co
         0x09200045,
         0x09200a00 // thanks aboood!
     };
-    for (size_t i = 0; i < sizeof(precomp_shaders) / sizeof(uint32_t); i++) {
+    for (size_t i = 0; i < (sizeof(precomp_shaders) >>  2); i++) {
         gfx_lookup_or_create_shader_program(precomp_shaders[i]);
     }
 }
@@ -1675,14 +1683,7 @@ struct GfxRenderingAPI *gfx_get_current_rendering_api(void) {
 
 void gfx_start_frame(void) {
     gfx_wapi->handle_events();
-#ifndef TARGET_N3DS
-    gfx_wapi->get_dimensions(&gfx_current_dimensions.width, &gfx_current_dimensions.height);
-    if (gfx_current_dimensions.height == 0) {
-        // Avoid division by zero
-        gfx_current_dimensions.height = 1;
-    }
-    gfx_current_dimensions.aspect_ratio = (float)gfx_current_dimensions.width / (float)gfx_current_dimensions.height;
-#endif
+
 }
 
 void gfx_run(Gfx *commands) {

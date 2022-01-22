@@ -447,7 +447,7 @@ static void gfx_citro3d_upload_texture(const uint8_t *rgba32_buf, int width, int
                     if (realY >= height)
                         realY -= height;
 
-                    int pos = sTileOrder[(x2 & 0b11) + (y2 & 0b11) * 4] + 16 * (x2 / 4) + 32 * (y2 / 4);
+                    int pos = sTileOrder[x2 % 4 + y2 % 4 * 4] + 16 * (x2 / 4) + 32 * (y2 / 4);
                     u32 c = ((u32*)rgba32_buf)[realY * width + realX];
                     ((u32*)sTexBuf)[offs + pos] = ((c & 0xFF) << 24) | (((c >> 8) & 0xFF) << 16) | (((c >> 16) & 0xFF) << 8) | (c >> 24);
                 }

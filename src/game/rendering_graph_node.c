@@ -204,7 +204,7 @@ static void geo_process_master_list(struct GraphNodeMasterList *node) {
 
     if (gCurGraphNodeMasterList == NULL && node->node.children != NULL) {
         gCurGraphNodeMasterList = node;
-        for (i = 0; i < GFX_NUM_MASTER_LISTS; i++) {
+        for (i = 0; i < GFX_NUM_MASTER_LISTS; ++i) {
             node->listHeads[i] = NULL;
         }
         geo_process_node_and_siblings(node->node.children);
@@ -267,21 +267,12 @@ static void geo_process_perspective(struct GraphNodePerspective *node) {
  * range of this node.
  */
 static void geo_process_level_of_detail(struct GraphNodeLevelOfDetail *node) {
-/*#ifdef GBI_FLOATS
     Mtx *mtx = gMatStackFixed[gMatStackIndex];
     s16 distanceFromCam = (s32) -mtx->m[3][2]; // z-component of the translation column
-#else
-    // The fixed point Mtx type is defined as 16 longs, but it's actually 16
-    // shorts for the integer parts followed by 16 shorts for the fraction parts
-    Mtx *mtx = gMatStackFixed[gMatStackIndex];
-    s16 distanceFromCam = -GET_HIGH_S16_OF_32(mtx->m[1][3]); // z-component of the translation column
-#endif
 
-#ifndef TARGET_N64
-    // We assume modern hardware is powerful enough to draw the most detailed variant
-#endif
-*/
-    if (node->minDistance <= 0 && 0 < node->maxDistance) {
+
+
+    if (node->minDistance <= distanceFromCam &&  distanceFromCam < node->maxDistance) {
 
 		if (node->node.children != 0) {
             geo_process_node_and_siblings(node->node.children);
@@ -702,7 +693,7 @@ static void geo_process_shadow(struct GraphNodeShadow *node) {
                                              node->shadowSolidity, node->shadowType);
         if (shadowList != NULL) {
             mtx = alloc_display_list(sizeof(*mtx));
-            gMatStackIndex++;
+            ++gMatStackIndex;
             mtxf_translate(mtxf, shadowPos);
             mtxf_mul(gMatStack[gMatStackIndex], mtxf, *gCurGraphNodeCamera->matrixPtr);
             mtxf_to_mtx(mtx, gMatStack[gMatStackIndex]);

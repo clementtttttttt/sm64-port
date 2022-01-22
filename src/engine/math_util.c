@@ -12,6 +12,14 @@ Vec4s *gSplineKeyframe;
 float gSplineKeyframeFraction;
 int gSplineState;
 
+ __attribute__((__always_inline__)) static float __sqrtf(float f) {
+      __asm__ __volatile__(
+
+      "vsqrt.f32 %0, %0"
+      : "+w"(f));
+      return f;
+    }
+
 // These functions have bogus return values.
 // Disable the compiler warning.
 #pragma GCC diagnostic push
@@ -132,7 +140,7 @@ void *vec3f_cross(Vec3f dest, Vec3f a, Vec3f b) {
 /// Scale vector 'dest' so it has length 1
 void *vec3f_normalize(Vec3f dest) {
     //! Possible division by zero
-    f32 invsqrt = 1.0f / sqrtf(dest[0] * dest[0] + dest[1] * dest[1] + dest[2] * dest[2]);
+    f32 invsqrt = 1.0f / __sqrtf(dest[0] * dest[0] + dest[1] * dest[1] + dest[2] * dest[2]);
 
     dest[0] *= invsqrt;
     dest[1] *= invsqrt;
@@ -149,7 +157,7 @@ void mtxf_copy(Mat4 dest, Mat4 src) {
     register u32 *s = (u32 *) src;
 
     for (i = 0; i < 16; i++) {
-        *d++ = *s++;
+        d[i] = s[i];
     }
 }
 
@@ -200,7 +208,7 @@ void mtxf_lookat(Mat4 mtx, Vec3f from, Vec3f to, s16 roll) {
     dx = to[0] - from[0];
     dz = to[2] - from[2];
 
-    invLength = -1.0 / sqrtf(dx * dx + dz * dz);
+    invLength = -1.0 / __sqrtf(dx * dx + dz * dz);
     dx *= invLength;
     dz *= invLength;
 
@@ -212,7 +220,7 @@ void mtxf_lookat(Mat4 mtx, Vec3f from, Vec3f to, s16 roll) {
     yColZ = to[1] - from[1];
     zColZ = to[2] - from[2];
 
-    invLength = -1.0 / sqrtf(xColZ * xColZ + yColZ * yColZ + zColZ * zColZ);
+    invLength = -1.0 / __sqrtf(xColZ * xColZ + yColZ * yColZ + zColZ * zColZ);
     xColZ *= invLength;
     yColZ *= invLength;
     zColZ *= invLength;
@@ -221,7 +229,7 @@ void mtxf_lookat(Mat4 mtx, Vec3f from, Vec3f to, s16 roll) {
     yColX = zColY * xColZ - xColY * zColZ;
     zColX = xColY * yColZ - yColY * xColZ;
 
-    invLength = 1.0 / sqrtf(xColX * xColX + yColX * yColX + zColX * zColX);
+    invLength = 1.0 / __sqrtf(xColX * xColX + yColX * yColX + zColX * zColX);
 
     xColX *= invLength;
     yColX *= invLength;
@@ -231,7 +239,7 @@ void mtxf_lookat(Mat4 mtx, Vec3f from, Vec3f to, s16 roll) {
     yColY = zColZ * xColX - xColZ * zColX;
     zColY = xColZ * yColX - yColZ * xColX;
 
-    invLength = 1.0 / sqrtf(xColY * xColY + yColY * yColY + zColY * zColY);
+    invLength = 1.0 / __sqrtf(xColY * xColY + yColY * yColY + zColY * zColY);
     xColY *= invLength;
     yColY *= invLength;
     zColY *= invLength;
@@ -562,25 +570,6 @@ void mtxf_mul_vec3s(Mat4 mtx, Vec3s b) {
  * exception. On Wii and Wii U Virtual Console the value will simply be clamped
  * and no crashes occur.
  */
-void mtxf_to_mtx(Mtx *dest, Mat4 src) {
-#ifdef AVOID_UB
-    // Avoid type-casting which is technically UB by calling the equivalent
-    // guMtxF2L function. This helps little-endian systems, as well.
-    guMtxF2L(src, dest);
-#else
-    s32 asFixedPoint;
-    register s32 i;
-    register s16 *a3 = (s16 *) dest;      // all integer parts stored in first 16 bytes
-    register s16 *t0 = (s16 *) dest + 16; // all fraction parts stored in last 16 bytes
-    register f32 *t1 = (f32 *) src;
-
-    for (i = 0; i < 16; i++) {
-        asFixedPoint = *t1++ * (1 << 16); //! float-to-integer conversion responsible for PU crashes
-        *a3++ = GET_HIGH_S16_OF_32(asFixedPoint); // integer part
-        *t0++ = GET_LOW_S16_OF_32(asFixedPoint);  // fraction part
-    }
-#endif
-}
 
 /**
  * Set 'mtx' to a transformation matrix that rotates around the z axis.
@@ -627,8 +616,8 @@ void vec3f_get_dist_and_angle(Vec3f from, Vec3f to, f32 *dist, s16 *pitch, s16 *
     register f32 y = to[1] - from[1];
     register f32 z = to[2] - from[2];
 
-    *dist = sqrtf(x * x + y * y + z * z);
-    *pitch = atan2s(sqrtf(x * x + z * z), y);
+    *dist = __sqrtf(x * x + y * y + z * z);
+    *pitch = atan2s(__sqrtf(x * x + z * z), y);
     *yaw = atan2s(z, x);
 }
 

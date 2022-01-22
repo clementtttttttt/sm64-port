@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <ultra64.h>
+#include "armdsp.h"
 
 inline void *memcpy(int *dst, const int *src, size_t size) {
     u8 *_dst = dst;
@@ -15,11 +16,21 @@ inline void *memcpy(int *dst, const int *src, size_t size) {
 
 #define HAS_SSE41 0
 #define HAS_NEON 0
+typedef int32_t int8x4_t;
+typedef int32_t int16x2_t;
+typedef uint32_t uint8x4_t;
+typedef uint32_t uint16x2_t;
 
 #pragma GCC optimize ("unroll-loops")
 
-
-
+static __inline__ int16x2_t __attribute__((__always_inline__, __nodebug__))
+__qadd16(int16x2_t __a, int16x2_t __b) {
+  return __builtin_arm_qadd16(__a, __b);
+}
+static __inline__ int16x2_t __attribute__((__always_inline__, __nodebug__))
+__qsub16(int16x2_t __a, int16x2_t __b) {
+  return __builtin_arm_qsub16(__a, __b);
+}
 #define ROUND_UP_32(v) (((v) + 31) & ~31)
 #define ROUND_UP_16(v) (((v) + 15) & ~15)
 #define ROUND_UP_8(v) (((v) + 7) & ~7)
@@ -100,6 +111,7 @@ static inline int32_t clamp32(int64_t v) {
 	v&=0x7fffffff;
 	v|=biton?0x80000000:0;
     return (int32_t)v;
+
 }
 
 void aClearBufferImpl(uint16_t addr, int nbytes) {
@@ -278,11 +290,7 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     do {
         for (i = 0; i < 8; ++i) {
             tbl = resample_table[pitch_accumulator >> 10];
-            sample = ((in[0] * tbl[0] + 0x4000) >> 15) +
-                     ((in[1] * tbl[1] + 0x4000) >> 15) +
-                     ((in[2] * tbl[2] + 0x4000) >> 15) +
-                     ((in[3] * tbl[3] + 0x4000) >> 15);
-            *out = clamp16(sample);
+			*out  = __builtin_arm_qadd16(__builtin_arm_qadd16(((in[0] * tbl[0] + 0x4000) >> 15) , ((in[1] * tbl[1] + 0x4000) >> 15)), __builtin_arm_qadd16(((in[2] * tbl[2] + 0x4000) >> 15) , ((in[3] * tbl[3] + 0x4000) >> 15)));
 			++out;
             pitch_accumulator += (pitch << 1);
             in += pitch_accumulator >> 16;
@@ -295,9 +303,8 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     memcpy(state, in, 8);
     i = (in - in_initial + 4) & 7;
     in -= i;
-    if (i != 0) {
-        i = -8 - i;
-    }
+	i = -8 - i;
+    
     state[5] = i;
     memcpy(state + 8, in,16);
 }
@@ -329,8 +336,8 @@ void aEnvMixerImpl(uint8_t flags, ENVMIX_STATE state) {
         step_diff[1] = rspa.vol[0] * (rate[1] - 0x10000) / 8;
 
         for (i = 0; i < 8; ++i) {
-            vols[0][i] = clamp32((int64_t)(rspa.vol[0] << 16) + step_diff[0] * (i + 1));
-            vols[1][i] = clamp32((int64_t)(rspa.vol[1] << 16) + step_diff[1] * (i + 1));
+            vols[0][i] = qadd((int64_t)(rspa.vol[0] << 16) , step_diff[0] * (i + 1));
+            vols[1][i] = qadd((int64_t)(rspa.vol[1] << 16) , step_diff[1] * (i + 1));
         }
     } else {
         memcpy(vols[0], state, 32);
@@ -399,9 +406,8 @@ void aMixImpl(int16_t gain, uint16_t in_addr, uint16_t out_addr) {
         while (nbytes > 0) {
 
             for (i = 0; i < 16; ++i) {
-                sample = *out - *in;
+                *out=__builtin_arm_qsub16(*out , *in);
 				++in;
-                *out = clamp16(sample);
 				++out;
 				
 			}
@@ -413,9 +419,8 @@ void aMixImpl(int16_t gain, uint16_t in_addr, uint16_t out_addr) {
     while (nbytes > 0) {
 
         for (i = 0; i < 16; ++i) {
-            sample = ((*out * 0x7fff + *in * gain) + 0x4000) >> 15;
+            *out = __builtin_arm_qadd16((*out * 0x7fff + *in * gain) , 0x4000) >> 15;
 			++in;
-            *out = clamp16(sample);
 			++out;
 			
 		}

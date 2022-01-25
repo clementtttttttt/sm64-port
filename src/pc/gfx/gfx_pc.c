@@ -640,6 +640,8 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx *verti
     for (size_t i = 0; i < n_vertices; i++, dest_index++) {
         const Vtx_t *v = &vertices[i].v;
         const Vtx_tn *vn = &vertices[i].n;
+		
+        struct LoadedVertex *d = &rsp.loaded_vertices[dest_index];
 
         float x = v->ob[0] * rsp.MP_matrix[0][0] + v->ob[1] * rsp.MP_matrix[1][0] + v->ob[2] * rsp.MP_matrix[2][0] + rsp.MP_matrix[3][0];
         float y = v->ob[0] * rsp.MP_matrix[0][1] + v->ob[1] * rsp.MP_matrix[1][1] + v->ob[2] * rsp.MP_matrix[2][1] + rsp.MP_matrix[3][1];
@@ -762,6 +764,9 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx) {
     struct LoadedVertex *v3 = &rsp.loaded_vertices[vtx3_idx];
     struct LoadedVertex *v_arr[3] = {v1, v2, v3};
 
+	if(v1->z>20670||v2->z>20670||v3->z>20670){
+		return;
+	}
 
 
     //if (rand()%2) return;

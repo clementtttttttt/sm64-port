@@ -41,16 +41,11 @@ u8 unused8038EEA8[0x30];
  * Allocate the part of the surface node pool to contain a surface node.
  */
 static struct SurfaceNode *alloc_surface_node(void) {
-    struct SurfaceNode *node = &sSurfaceNodePool[gSurfaceNodesAllocated];
-    gSurfaceNodesAllocated++;
+    struct SurfaceNode *node = &sSurfaceNodePool[gSurfaceNodesAllocated++];
 
     node->next = NULL;
 
-    //! A bounds check! If there's more surface nodes than 7000 allowed,
-    //  we, um...
-    // Perhaps originally just debug feedback?
-    if (gSurfaceNodesAllocated >= 7000) {
-    }
+
 
     return node;
 }
@@ -61,14 +56,8 @@ static struct SurfaceNode *alloc_surface_node(void) {
  */
 static struct Surface *alloc_surface(void) {
 
-    struct Surface *surface = &sSurfacePool[gSurfacesAllocated];
-    gSurfacesAllocated++;
+    struct Surface *surface = &sSurfacePool[gSurfacesAllocated++];
 
-    //! A bounds check! If there's more surfaces than the 2300 allowed,
-    //  we, um...
-    // Perhaps originally just debug feedback?
-    if (gSurfacesAllocated >= sSurfacePoolSize) {
-    }
 
     surface->type = 0;
     surface->force = 0;
@@ -212,9 +201,9 @@ static s16 lower_cell_index(s16 coord) {
     // Include extra cell if close to boundary
     //! Some wall checks are larger than the buffer, meaning wall checks can
     //  miss walls that are near a cell border.
-    if (coord % 0x400 < 50) {
-        index -= 1;
-    }
+  
+        index -=    (coord % 0x400 < 50) ;
+    
 
     if (index < 0) {
         index = 0;
@@ -244,9 +233,8 @@ static s16 upper_cell_index(s16 coord) {
     // Include extra cell if close to boundary
     //! Some wall checks are larger than the buffer, meaning wall checks can
     //  miss walls that are near a cell border.
-    if (coord % 0x400 > 0x400 - 50) {
-        index += 1;
-    }
+        index += (coord % 0x400 > 0x400 - 50) ;
+    
 
     if (index > 15) {
         index = 15;
@@ -473,9 +461,7 @@ static void load_static_surfaces(s16 **data, s16 *vertexData, s16 surfaceType, s
         }
 
         *data += 3;
-        if (hasForce) {
-            *data += 1;
-        }
+        *data += hasForce;
     }
 }
 
@@ -715,10 +701,10 @@ void load_object_surfaces(s16 **data, s16 *vertexData) {
     s16 room;
 
     surfaceType = *(*data);
-    (*data)++;
+    ++(*data);
 
     numSurfaces = *(*data);
-    (*data)++;
+    ++(*data);
 
     hasForce = surface_has_force(surfaceType);
 
@@ -732,11 +718,11 @@ void load_object_surfaces(s16 **data, s16 *vertexData) {
     } else {
         room = 0;
     }
-
+	struct Surface *surface;
     for (i = 0; i < numSurfaces; i++) {
-        struct Surface *surface = read_surface_data(vertexData, data);
 
-        if (surface != NULL) {
+
+        if ((surface = read_surface_data(vertexData, data))!= NULL) {
             surface->object = gCurrentObject;
             surface->type = surfaceType;
 
@@ -751,11 +737,8 @@ void load_object_surfaces(s16 **data, s16 *vertexData) {
             add_surface(surface, TRUE);
         }
 
-        if (hasForce) {
-            *data += 4;
-        } else {
-            *data += 3;
-        }
+
+            *data += 3 + hasForce;
     }
 }
 

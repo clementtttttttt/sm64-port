@@ -518,9 +518,9 @@ static void gfx_citro3d_set_viewport(int x, int y, int width, int height)
     }
     else if (gGfx3DSMode == GFX_3DS_MODE_WIDE)
     {
-        viewport_x = x * 2;
+        viewport_x = x << 1;
         viewport_y = y;
-        viewport_width = width * 2;
+        viewport_width = width << 1;
         viewport_height = height;
     }
     else // gGfx3DSMode == GFX_3DS_MODE_NORMAL
@@ -646,37 +646,34 @@ static void renderTwoColorTris(float buf_vbo[], size_t buf_vbo_len, size_t buf_v
     C3D_TexEnvColor(C3D_GetTexEnv(0), color1Constant ? firstColor1 : firstColor0);
     for (u32 i = 0; i < 3 * buf_vbo_num_tris; i++)
     {
-		--dst;
-        *++dst = buf_vbo[offset + 0];
-        *++dst = buf_vbo[offset + 1];
-        *++dst = buf_vbo[offset + 2];
-        *++dst = buf_vbo[offset + 3];
+		*((s64*)dst++) = *((s64*)(&buf_vbo[offset]));
+		*((s64*)++dst) = *((s64*)(&buf_vbo[offset+2]));
+		++dst;
         int vtxOffs = 4;
         if (hasTex)
         {
             *++dst = buf_vbo[offset + vtxOffs++] * sTexturePoolScaleS[sCurTex];
-            *++dst = 1 - (buf_vbo[offset + vtxOffs++] * sTexturePoolScaleT[sCurTex]);
+            *++dst = (buf_vbo[offset + vtxOffs++] * sTexturePoolScaleT[sCurTex]);
         }
         else
         {
-            *++dst = 0;
-            *++dst = 0;
+            *((s64*)++dst) = 0;
+			dst+=1;
         }
         if (color0Constant)
             vtxOffs += hasAlpha ? 4 : 3;
         if (hasColor)
         {
-            *++dst = buf_vbo[offset + vtxOffs++];
-            *++dst = buf_vbo[offset + vtxOffs++];
-            *++dst = buf_vbo[offset + vtxOffs++];
-            *++dst = hasAlpha ? buf_vbo[offset + vtxOffs++] : 1.0f;
+			*((s64*)++dst) = *((s64*)(&buf_vbo[offset+vtxOffs]));
+			++vtxOffs;
+			++dst;
+			*((s64*)++dst) = *((s64*)(&buf_vbo[offset+ (++vtxOffs)]));
+			vtxOffs+=2;
+			++dst;
         }
         else
         {
-            *++dst = 1.0f;
-            *++dst = 1.0f;
-            *++dst = 1.0f;
-            *++dst = 1.0f;
+            dst+=4;
         }
         ++dst;
 
@@ -689,14 +686,11 @@ static void renderTwoColorTris(float buf_vbo[], size_t buf_vbo_len, size_t buf_v
 
 static void gfx_citro3d_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size_t buf_vbo_num_tris)
 {
-    if (sBufIdx * VERTEX_SHADER_SIZE > 262144)
-    {
-        return;
-    }
 
+		if ((sBufIdx * VERTEX_SHADER_SIZE > 262144))return;
     if (sShaderProgramPool[sCurShader].cc_features.num_inputs > 1)
     {
-        renderTwoColorTris(buf_vbo, buf_vbo_len, buf_vbo_num_tris);
+				renderTwoColorTris(buf_vbo, buf_vbo_len, buf_vbo_num_tris);
         return;
     }
 
@@ -707,11 +701,17 @@ static void gfx_citro3d_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size
     bool hasAlpha = sShaderProgramPool[sCurShader].cc_features.opt_alpha;
     for (u32 i = 0; i < 3 * buf_vbo_num_tris; i++)
     {
-		--dst;
-        *++dst = buf_vbo[offset + 0];
+		/*
+        *dst = buf_vbo[offset + 0];
         *++dst = buf_vbo[offset + 1];
         *++dst = buf_vbo[offset + 2];
         *++dst = buf_vbo[offset + 3];
+		*/
+		
+		*((s64*)dst++) = *((s64*)(&buf_vbo[offset]));
+		*((s64*)++dst) = *((s64*)(&buf_vbo[offset+2]));
+		++dst;
+		
         int vtxOffs = 4;
         if (hasTex)
         {
@@ -720,22 +720,21 @@ static void gfx_citro3d_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size
         }
         else
         {
-            *++dst = 0;
-            *++dst = 0;
-        }
+            *((s64*)++dst) = 0;
+			dst+=1;
+			
+		}
         if (hasColor)
         {
-            *++dst = buf_vbo[offset + vtxOffs++];
-            *++dst = buf_vbo[offset + vtxOffs++];
-            *++dst = buf_vbo[offset + vtxOffs++];
-            *++dst = hasAlpha ? buf_vbo[offset + vtxOffs++] : 1.0f;
+            *((s64*)++dst) = *((s64*)&buf_vbo[offset + vtxOffs++]);
+			++dst;
+			++vtxOffs;
+            *((s64*)++dst) = *((s64*)&buf_vbo[offset + vtxOffs++]);
+            ++dst;
         }
         else
         {
-            *++dst = 1.0f;
-            *++dst = 1.0f;
-            *++dst = 1.0f;
-            *++dst = 1.0f;
+            dst+=4;
         }
         ++dst;
 

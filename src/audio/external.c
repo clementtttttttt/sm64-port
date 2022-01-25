@@ -1771,7 +1771,7 @@ void process_level_music_dynamics(void) {
             }
 
             j++;
-            bit = bit >> 1;
+            bit >>= 1;
         }
 
         // condIndex uses a0 (the same register as 'bit') instead of v1
@@ -2017,7 +2017,7 @@ void sound_init(void) {
     D_80332110 = 0;
     sUnused80332114 = 0;
     sPlayer0CurSeqId = 0xff;
-    gSoundMode = SOUND_MODE_STEREO;
+    gSoundMode = SOUND_MODE_MONO;
     sBackgroundMusicQueueSize = 0;
     D_8033211C = 0;
     D_80332120 = 0;

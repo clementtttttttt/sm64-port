@@ -23,19 +23,31 @@ inline void *memcpy(s64 *dst, const s64 *src, size_t size) {
 #define HAS_SSE41 0
 #define HAS_NEON 0
 typedef int32_t int8x4_t;
-typedef int32_t int16x2_t;
+typedef union{
+	int16_t s[2];
+	int32_t l;
+	
+}int16x2_t;
 typedef uint32_t uint8x4_t;
-typedef uint32_t uint16x2_t;
+typedef union{
+	uint16_t s[2];
+	uint32_t l;
+	
+}uint16x2_t;
 
 #pragma GCC optimize ("unroll-loops")
 
 static __inline__ int16x2_t __attribute__((__always_inline__, __nodebug__))
 __qadd16(int16x2_t __a, int16x2_t __b) {
-  return __builtin_arm_qadd16(__a, __b);
+	int16x2_t ret;
+	ret.l=__builtin_arm_qadd16(__a.l, __b.l);
+  return ret;
 }
 static __inline__ int16x2_t __attribute__((__always_inline__, __nodebug__))
 __qsub16(int16x2_t __a, int16x2_t __b) {
-  return __builtin_arm_qsub16(__a, __b);
+		int16x2_t ret;
+ret.l=__builtin_arm_qsub16(__a.l, __b.l);
+  return ret;
 }
 #define ROUND_UP_32(v) (((v) + 31) & ~31)
 #define ROUND_UP_16(v) (((v) + 15) & ~15)
@@ -217,7 +229,7 @@ void aInterleaveImpl(uint16_t left, uint16_t right) {
 
 void aDMEMMoveImpl(uint16_t in_addr, uint16_t out_addr, int nbytes) {
     nbytes = ROUND_UP_16(nbytes);
-    memmove(rspa.buf.as_u8 + out_addr, rspa.buf.as_u8 + in_addr, nbytes);
+    memcpy(rspa.buf.as_u8 + out_addr, rspa.buf.as_u8 + in_addr, nbytes);
 }
 
 void aSetLoopImpl(ADPCM_STATE *adpcm_loop_state) {
@@ -296,7 +308,8 @@ void aResampleImpl(uint8_t flags, uint16_t pitch, RESAMPLE_STATE state) {
     do {
         for (i = 0; i < 8; ++i) {
             tbl = resample_table[pitch_accumulator >> 10];
-			*out  = __builtin_arm_qadd16(__builtin_arm_qadd16(((in[0] * tbl[0] + 0x4000) >> 15) , ((in[1] * tbl[1] + 0x4000) >> 15)), __builtin_arm_qadd16(((in[2] * tbl[2] + 0x4000) >> 15) , ((in[3] * tbl[3] + 0x4000) >> 15)));
+			int16x2_t final=__qadd16((int16x2_t){{((in[0] * tbl[0] + 0x4000) >> 15),((in[1] * tbl[1] + 0x4000) >> 15)}},(int16x2_t){{((in[2] * tbl[2] + 0x4000) >> 15),((in[3] * tbl[3] + 0x4000) >> 15)}});
+			*out  = __builtin_arm_qadd16(final.s[0],final.s[1]);
 			++out;
             pitch_accumulator += (pitch << 1);
             in += pitch_accumulator >> 16;

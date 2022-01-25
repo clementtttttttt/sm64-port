@@ -58,7 +58,6 @@ static void audio_3ds_play(const uint8_t *buf, size_t len)
     ndspChnWaveBufAdd(0, &sDspBuffers[sNextBuffer]);
 
     s16* dst = (s16*)sDspBuffers[sNextBuffer].data_vaddr;
- //   memcpy(dst, buf, len);
 	for(unsigned int i=0;i<(len>>3);++i){
 		((int*)dst)[i]=((int*)buf)[i<<1];
 	}

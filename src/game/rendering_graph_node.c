@@ -456,6 +456,7 @@ static void geo_process_billboard(struct GraphNodeBillboard *node) {
     }
     if (node->node.children != NULL) {
         geo_process_node_and_siblings(node->node.children);
+		
     }
     gMatStackIndex--;
 }
@@ -470,7 +471,7 @@ static void geo_process_display_list(struct GraphNodeDisplayList *node) {
         geo_append_display_list(node->displayList, node->node.flags >> 8);
     }
     if (node->node.children != NULL) {
-        geo_process_node_and_siblings(node->node.children);
+        //geo_process_node_and_siblings(node->node.children);
     }
 }
 

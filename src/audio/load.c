@@ -677,9 +677,9 @@ void *sequence_dma_async(s32 seqId, s32 arg1, struct SequencePlayer *seqPlayer) 
     if (seqLength <= 0x40) {
         // Immediately load short sequenece
         audio_dma_copy_immediate((uintptr_t) seqData, ptr, seqLength);
-        if (1) {
+
         gSeqLoadStatus[seqId] = SOUND_LOAD_STATUS_COMPLETE;
-        }
+        
     } else {
         audio_dma_copy_immediate((uintptr_t) seqData, ptr, 0x40);
         mesgQueue = &seqPlayer->seqDmaMesgQueue;

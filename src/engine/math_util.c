@@ -3,9 +3,38 @@
 #include "sm64.h"
 #include "engine/graph_node.h"
 #include "math_util.h"
+#include "../pc/armdsp.h"
 #include "surface_collision.h"
 
 #include "trig_tables.inc.c"
+typedef int32_t int8x4_t;
+typedef union{
+	int16_t s[2];
+	int32_t l;
+	
+}int16x2_t;
+typedef uint32_t uint8x4_t;
+typedef union{
+	uint16_t s[2];
+	uint32_t l;
+	
+}uint16x2_t;
+
+
+
+
+static __inline__ int16x2_t __attribute__((__always_inline__, __nodebug__))
+__qadd16(int16x2_t __a, int16x2_t __b) {
+	int16x2_t ret;
+	ret.l=__builtin_arm_qadd16(__a.l, __b.l);
+  return ret;
+}
+static __inline__ int16x2_t __attribute__((__always_inline__, __nodebug__))
+__qsub16(int16x2_t __a, int16x2_t __b) {
+		int16x2_t ret;
+ret.l=__builtin_arm_qsub16(__a.l, __b.l);
+  return ret;
+}
 
 // Variables for a spline curve animation (used for the flight path in the grand star cutscene)
 Vec4s *gSplineKeyframe;
@@ -20,6 +49,23 @@ int gSplineState;
       return f;
     }
 
+float Q_rsqrt( float number )
+{
+	long i;
+	float x2, y;
+	const float threehalfs = 1.5F;
+
+	x2 = number * 0.5F;
+	y  = number;
+	i  = * ( long * ) &y;                       // evil floating point bit level hacking
+	i  = 0x5f3759df - ( i >> 1 );               // what the fuck? 
+	y  = * ( float * ) &i;
+	y  = y * ( threehalfs - ( x2 * y * y ) );   // 1st iteration
+//	y  = y * ( threehalfs - ( x2 * y * y ) );   // 2nd iteration, this can be removed
+
+	return y;
+}
+    
 // These functions have bogus return values.
 // Disable the compiler warning.
 #pragma GCC diagnostic push
@@ -27,8 +73,7 @@ int gSplineState;
 
 /// Copy vector 'src' to 'dest'
 void *vec3f_copy(Vec3f dest, Vec3f src) {
-    dest[0] = src[0];
-    dest[1] = src[1];
+    *((s64*)&dest[0]) = *((s64*)&src[0]);
     dest[2] = src[2];
     return &dest; //! warning: function returns address of local variable
 }
@@ -73,29 +118,6 @@ void *vec3s_set(Vec3s dest, s16 x, s16 y, s16 z) {
     return &dest; //! warning: function returns address of local variable
 }
 
-/// Add vector a to 'dest'
-void *vec3s_add(Vec3s dest, Vec3s a) {
-    dest[0] += a[0];
-    dest[1] += a[1];
-    dest[2] += a[2];
-    return &dest; //! warning: function returns address of local variable
-}
-
-/// Make 'dest' the sum of vectors a and b.
-void *vec3s_sum(Vec3s dest, Vec3s a, Vec3s b) {
-    dest[0] = a[0] + b[0];
-    dest[1] = a[1] + b[1];
-    dest[2] = a[2] + b[2];
-    return &dest; //! warning: function returns address of local variable
-}
-
-/// Subtract vector a from 'dest'
-void *vec3s_sub(Vec3s dest, Vec3s a) {
-    dest[0] -= a[0];
-    dest[1] -= a[1];
-    dest[2] -= a[2];
-    return &dest; //! warning: function returns address of local variable
-}
 
 /// Convert short vector a to float vector 'dest'
 void *vec3s_to_vec3f(Vec3f dest, Vec3s a) {
@@ -140,7 +162,7 @@ void *vec3f_cross(Vec3f dest, Vec3f a, Vec3f b) {
 /// Scale vector 'dest' so it has length 1
 void *vec3f_normalize(Vec3f dest) {
     //! Possible division by zero
-    f32 invsqrt = 1.0f / __sqrtf(dest[0] * dest[0] + dest[1] * dest[1] + dest[2] * dest[2]);
+    f32 invsqrt = Q_rsqrt(dest[0] * dest[0] + dest[1] * dest[1] + dest[2] * dest[2]);
 
     dest[0] *= invsqrt;
     dest[1] *= invsqrt;
@@ -153,10 +175,10 @@ void *vec3f_normalize(Vec3f dest) {
 /// Copy matrix 'src' to 'dest'
 void mtxf_copy(Mat4 dest, Mat4 src) {
     register s32 i;
-    register u32 *d = (u32 *) dest;
-    register u32 *s = (u32 *) src;
+     u64 *d = (u64 *) dest;
+     u64 *s = (u64 *) src;
 
-    for (i = 0; i < 16; i++) {
+    for (i = 0; i < 8; i++) {
         d[i] = s[i];
     }
 }
@@ -208,7 +230,7 @@ void mtxf_lookat(Mat4 mtx, Vec3f from, Vec3f to, s16 roll) {
     dx = to[0] - from[0];
     dz = to[2] - from[2];
 
-    invLength = -1.0 / __sqrtf(dx * dx + dz * dz);
+    invLength = -Q_rsqrt(dx * dx + dz * dz);
     dx *= invLength;
     dz *= invLength;
 
@@ -220,7 +242,7 @@ void mtxf_lookat(Mat4 mtx, Vec3f from, Vec3f to, s16 roll) {
     yColZ = to[1] - from[1];
     zColZ = to[2] - from[2];
 
-    invLength = -1.0 / __sqrtf(xColZ * xColZ + yColZ * yColZ + zColZ * zColZ);
+    invLength = -Q_rsqrt(xColZ * xColZ + yColZ * yColZ + zColZ * zColZ);
     xColZ *= invLength;
     yColZ *= invLength;
     zColZ *= invLength;
@@ -229,7 +251,7 @@ void mtxf_lookat(Mat4 mtx, Vec3f from, Vec3f to, s16 roll) {
     yColX = zColY * xColZ - xColY * zColZ;
     zColX = xColY * yColZ - yColY * xColZ;
 
-    invLength = 1.0 / __sqrtf(xColX * xColX + yColX * yColX + zColX * zColX);
+    invLength = Q_rsqrt(xColX * xColX + yColX * yColX + zColX * zColX);
 
     xColX *= invLength;
     yColX *= invLength;
@@ -239,7 +261,7 @@ void mtxf_lookat(Mat4 mtx, Vec3f from, Vec3f to, s16 roll) {
     yColY = zColZ * xColX - xColZ * zColX;
     zColY = xColZ * yColX - yColZ * xColX;
 
-    invLength = 1.0 / __sqrtf(xColY * xColY + yColY * yColY + zColY * zColY);
+    invLength = Q_rsqrt(xColY * xColY + yColY * yColY + zColY * zColY);
     xColY *= invLength;
     yColY *= invLength;
     zColY *= invLength;

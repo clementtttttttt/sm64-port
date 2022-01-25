@@ -689,7 +689,7 @@ void seq_channel_layer_process_script(struct SequenceChannelLayer *layer) {
 #ifdef VERSION_EU
         layer->duration = layer->noteDuration * sp3A >> 8;
 #else
-        layer->duration = layer->noteDuration * sp3A / 256;
+        layer->duration = layer->noteDuration * sp3A >> 8;
 #endif
         if ((seqPlayer->muted && (seqChannel->muteBehavior & MUTE_BEHAVIOR_STOP_NOTES) != 0)
             || seqChannel->stopSomething2

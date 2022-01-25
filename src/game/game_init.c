@@ -72,29 +72,31 @@ struct DemoInput gRecordedDemoInput = { 0 }; // possibly removed in EU. TODO: Ch
  * mode is not used in-game, where it is set in render_graph_node.c).
  */
 void my_rdp_init(void) {
-    gDPPipeSync(gDisplayListHead++);
-    gDPPipelineMode(gDisplayListHead++, G_PM_1PRIMITIVE);
+	--gDisplayListHead;
+    gDPPipeSync(++gDisplayListHead);
+    gDPPipelineMode(++gDisplayListHead, G_PM_1PRIMITIVE);
 
-    gDPSetScissor(gDisplayListHead++, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    gDPSetCombineMode(gDisplayListHead++, G_CC_SHADE, G_CC_SHADE);
+    gDPSetScissor(++gDisplayListHead, G_SC_NON_INTERLACE, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    gDPSetCombineMode(++gDisplayListHead, G_CC_SHADE, G_CC_SHADE);
 
-    gDPSetTextureLOD(gDisplayListHead++, G_TL_TILE);
-    gDPSetTextureLUT(gDisplayListHead++, G_TT_NONE);
-    gDPSetTextureDetail(gDisplayListHead++, G_TD_CLAMP);
-    gDPSetTexturePersp(gDisplayListHead++, G_TP_PERSP);
-    gDPSetTextureFilter(gDisplayListHead++, G_TF_BILERP);
-    gDPSetTextureConvert(gDisplayListHead++, G_TC_FILT);
+    gDPSetTextureLOD(++gDisplayListHead, G_TL_TILE);
+    gDPSetTextureLUT(++gDisplayListHead, G_TT_NONE);
+    gDPSetTextureDetail(++gDisplayListHead, G_TD_CLAMP);
+    gDPSetTexturePersp(++gDisplayListHead, G_TP_PERSP);
+    gDPSetTextureFilter(++gDisplayListHead, G_TF_BILERP);
+    gDPSetTextureConvert(++gDisplayListHead, G_TC_FILT);
 
-    gDPSetCombineKey(gDisplayListHead++, G_CK_NONE);
-    gDPSetAlphaCompare(gDisplayListHead++, G_AC_NONE);
-    gDPSetRenderMode(gDisplayListHead++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
-    gDPSetColorDither(gDisplayListHead++, G_CD_MAGICSQ);
-    gDPSetCycleType(gDisplayListHead++, G_CYC_FILL);
+    gDPSetCombineKey(++gDisplayListHead, G_CK_NONE);
+    gDPSetAlphaCompare(++gDisplayListHead, G_AC_NONE);
+    gDPSetRenderMode(++gDisplayListHead, G_RM_OPA_SURF, G_RM_OPA_SURF2);
+    gDPSetColorDither(++gDisplayListHead, G_CD_MAGICSQ);
+    gDPSetCycleType(++gDisplayListHead, G_CYC_FILL);
 
 #ifdef VERSION_SH
-    gDPSetAlphaDither(gDisplayListHead++, G_AD_PATTERN);
+    gDPSetAlphaDither(++gDisplayListHead, G_AD_PATTERN);
 #endif
-    gDPPipeSync(gDisplayListHead++);
+    gDPPipeSync(++gDisplayListHead);
+	++gDisplayListHead;
 }
 
 /**
